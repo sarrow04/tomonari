@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>京王線レール配置シミュレーター</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #efe8d8;
+    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+    color: #3a2e28;
+    overscroll-behavior: none;
+    user-select: none;
+  }
+  .app { max-width: 980px; margin: 0 auto; padding: 10px 10px 26px; }
+
+  header {
+    background: linear-gradient(135deg, #8b1e2b, #6e1622);
+    color: #f6ead0;
+    border-radius: 14px;
+    padding: 14px 18px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::after {
+    content: "";
+    position: absolute; left:0; right:0; bottom:0; height: 6px;
+    background: repeating-linear-gradient(90deg, #d4af37 0 18px, transparent 18px 26px);
+    opacity: 0.7;
+  }
+  header h1 { margin: 0; font-size: 19px; letter-spacing: 0.5px; }
+  header p { margin: 4px 0 0; font-size: 11.5px; opacity: 0.85; }
+
+  .panel {
+    background: #fbf7ec;
+    border: 1px solid #dcccaa;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  .panel-title { font-size: 12px; font-weight: bold; color: #8b1e2b; margin: 0 0 8px; }
+
+  .btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tool-btn {
+    flex: 1 1 auto;
+    min-width: 64px;
+    min-height: 46px;
+    background: #fff;
+    border: 2px solid #cbb98a;
+    border-radius: 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 4px 6px;
+    font-size: 11px;
+    color: #4a3b2a;
+    cursor: pointer;
+  }
+  .tool-btn canvas { pointer-events: none; }
+  .tool-btn.active {
+    border-color: #8b1e2b;
+    background: #fdeceb;
+    box-shadow: 0 0 0 2px rgba(139,30,43,0.15);
+  }
+
+  .train-btn {
+    flex: 1 1 auto; min-width: 78px;
+    border-radius: 10px; border: 2px solid #cbb98a;
+    padding: 6px 8px; font-size: 11px; text-align: center;
+    cursor: pointer; color: #fff; font-weight: bold;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.35);
+  }
+  .train-btn.active { outline: 3px solid #d4af37; outline-offset: 1px; }
+
+  .train-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .train-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: #fff; border: 1px solid #dcccaa; border-radius: 20px;
+    padding: 4px 8px 4px 10px; font-size: 11px;
+  }
+  .train-chip .dot { width: 10px; height: 10px; border-radius: 50%; display:inline-block; }
+  .train-chip button {
+    border: none; background: #e8d9d9; color: #8b1e2b; border-radius: 50%;
+    width: 18px; height: 18px; font-size: 11px; line-height: 1; cursor: pointer;
+  }
+
+  .canvas-wrap {
+    background: #fbf7ec;
+    border: 1px solid #dcccaa;
+    border-radius: 12px;
+    padding: 8px;
+    overflow-x: auto;
+    margin-bottom: 10px;
+  }
+  #board { display: block; touch-action: manipulation; border-radius: 6px; }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  .controls .grow { flex: 1 1 160px; display: flex; align-items: center; gap: 8px; }
+  .controls label { font-size: 11px; color: #6e5a44; white-space: nowrap; }
+  input[type=range] { flex: 1; accent-color: #8b1e2b; }
+  .icon-btn {
+    background: #8b1e2b; color: #f6ead0; border: none; border-radius: 9px;
+    padding: 9px 12px; font-size: 12px; font-weight: bold; cursor: pointer;
+    min-height: 42px;
+  }
+  .icon-btn.secondary { background: #fff; color: #8b1e2b; border: 2px solid #8b1e2b; }
+  .icon-btn.ghost { background: #efe4c8; color: #6e5a44; border: none; }
+
+  .hint { font-size: 10.5px; color: #8a7a5f; margin-top: 6px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1>🚃 京王線レール配置シミュレーター</h1>
+    <p>線路を自由に配置して、2000系〜9000系を走らせよう</p>
+  </header>
+
+  <div class="panel">
+    <p class="panel-title">線路パーツ</p>
+    <div class="btn-row" id="toolRow"></div>
+    <p class="hint">空マスをタップで設置／同じ種類を再タップで90°回転／消しゴムでタップして削除</p>
+  </div>
+
+  <div class="panel">
+    <p class="panel-title">電車を追加</p>
+    <div class="btn-row" id="trainTypeRow"></div>
+    <div style="margin-top:8px; display:flex; gap:8px;">
+      <button class="icon-btn" id="addTrainBtn">＋ 選んだ車両を配置</button>
+      <button class="icon-btn ghost" id="clearTrainsBtn">全車両を削除</button>
+    </div>
+    <div class="train-list" id="trainList"></div>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="board"></canvas>
+  </div>
+
+  <div class="panel controls">
+    <div class="grow">
+      <label>速度</label>
+      <input type="range" id="speedSlider" min="1" max="10" value="4">
+    </div>
+    <button class="icon-btn secondary" id="playPauseBtn">⏸ 一時停止</button>
+    <button class="icon-btn ghost" id="resetBtn">🗑 全消去</button>
+  </div>
+
+  <p class="hint" style="text-align:center;">iPadのSafariで開くとホーム画面に追加できます。配置内容は自動保存されます。</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- 基本設定 ----------
+  var COLS = 13, ROWS = 9, TILE = 48;
+  var N = 0, E = 1, S = 2, W = 3;
+
+  var TILE_DEFS = {
+    empty:    { edges: [] },
+    straight: { edges: [[N, S]] },
+    curve:    { edges: [[N, E]] },
+    t:        { edges: [[N, E], [E, S], [S, N]] },
+    cross:    { edges: [[N, S], [E, W]] },
+    station:  { edges: [[N, S]], isStation: true }
+  };
+
+  var TOOL_ORDER = ["straight", "curve", "t", "cross", "station", "eraser"];
+  var TOOL_LABEL = {
+    straight: "直線", curve: "カーブ", t: "分岐",
+    cross: "交差", station: "駅", eraser: "消去"
+  };
+
+  var TRAIN_SERIES = [
+    { id: "2000", name: "2000系",  body: "#3f6b3a", stripe: "#e8e2c8" },
+    { id: "5000", name: "5000系",  body: "#f2efe4", stripe: "#1e5fa8" },
+    { id: "6000", name: "6000系",  body: "#f0ead6", stripe: "#8b1e2b" },
+    { id: "7000", name: "7000系",  body: "#eae4d0", stripe: "#8b1e2b" },
+    { id: "8000", name: "8000系",  body: "#efe9d8", stripe: "#c23a5a" },
+    { id: "9000", name: "9000系",  body: "#eae6dc", stripe: "#233e7a" }
+  ];
+
+  // ---------- 状態 ----------
+  var grid = [];
+  for (var r = 0; r < ROWS; r++) {
+    var row = [];
+    for (var c = 0; c < COLS; c++) row.push({ type: "empty", rot: 0 });
+    grid.push(row);
+  }
+
+  var selectedTool = "straight";
+  var selectedSeries = TRAIN_SERIES[0].id;
+  var trains = [];
+  var trainSeq = 1;
+  var playing = true;
+  var speed = 4;
+
+  var canvas = document.getElementById("board");
+  var ctx = canvas.getContext("2d");
+  canvas.width = COLS * TILE;
+  canvas.height = ROWS * TILE;
+
+  // ---------- ユーティリティ ----------
+  function opposite(d) { return (d + 2) % 4; }
+
+  function getConnections(tile) {
+    var def = TILE_DEFS[tile.type];
+    if (!def) return [];
+    return def.edges.map(function (e) {
+      return [(e[0] + tile.rot) % 4, (e[1] + tile.rot) % 4];
+    });
+  }
+
+  function neighborCell(row, col, dir) {
+    if (dir === N) return { row: row - 1, col: col };
+    if (dir === E) return { row: row, col: col + 1 };
+    if (dir === S) return { row: row + 1, col: col };
+    return { row: row, col: col - 1 };
+  }
+
+  function inBounds(row, col) {
+    return row >= 0 && row < ROWS && col >= 0 && col < COLS;
+  }
+
+  function sideMidpoint(dir, ox, oy) {
+    if (dir === N) return { x: ox + TILE / 2, y: oy };
+    if (dir === E) return { x: ox + TILE, y: oy + TILE / 2 };
+    if (dir === S) return { x: ox + TILE / 2, y: oy + TILE };
+    return { x: ox, y: oy + TILE / 2 };
+  }
+
+  function cornerFor(a, b, ox, oy) {
+    var lo = Math.min(a, b), hi = Math.max(a, b);
+    if (lo === N && hi === E) return { x: ox + TILE, y: oy };
+    if (lo === E && hi === S) return { x: ox + TILE, y: oy + TILE };
+    if (lo === S && hi === W) return { x: ox, y: oy + TILE };
+    if (lo === N && hi === W) return { x: ox, y: oy };
+    return null; // opposite pair -> no corner, straight line
+  }
+
+  function edgePath(row, col, a, b) {
+    var ox = col * TILE, oy = row * TILE;
+    var p0 = sideMidpoint(a, ox, oy);
+    var p1 = sideMidpoint(b, ox, oy);
+    var ctrl = cornerFor(a, b, ox, oy);
+    return { p0: p0, p1: p1, ctrl: ctrl };
+  }
+
+  function pointOnPath(path, t) {
+    if (!path.ctrl) {
+      return {
+        x: path.p0.x + (path.p1.x - path.p0.x) * t,
+        y: path.p0.y + (path.p1.y - path.p0.y) * t
+      };
+    }
+    var mt = 1 - t;
+    return {
+      x: mt * mt * path.p0.x + 2 * mt * t * path.ctrl.x + t * t * path.p1.x,
+      y: mt * mt * path.p0.y + 2 * mt * t * path.ctrl.y + t * t * path.p1.y
+    };
+  }
+
+  function tangentOnPath(path, t) {
+    if (!path.ctrl) {
+      return { x: path.p1.x - path.p0.x, y: path.p1.y - path.p0.y };
+    }
+    var mt = 1 - t;
+    return {
+      x: 2 * mt * (path.ctrl.x - path.p0.x) + 2 * t * (path.p1.x - path.ctrl.x),
+      y: 2 * mt * (path.ctrl.y - path.p0.y) + 2 * t * (path.p1.y - path.ctrl.y)
+    };
+  }
+
+  // ---------- 描画: 線路 ----------
+  function drawTrackPath(path) {
+    var steps = 14;
+    var prevRailA = null, prevRailB = null;
+    for (var i = 0; i <= steps; i++) {
+      var t = i / steps;
+      var p = pointOnPath(path, t);
+      var tan = tangentOnPath(path, t);
+      var len = Math.sqrt(tan.x * tan.x + tan.y * tan.y) || 1;
+      var nx = -tan.y / len, ny = tan.x / len;
+
+      // 枕木
+      if (i % 3 === 0) {
+        ctx.strokeStyle = "#7a5a3a";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(p.x - nx * 8, p.y - ny * 8);
+        ctx.lineTo(p.x + nx * 8, p.y + ny * 8);
+        ctx.stroke();
+      }
+
+      var railA = { x: p.x - nx * 4.5, y: p.y - ny * 4.5 };
+      var railB = { x: p.x + nx * 4.5, y: p.y + ny * 4.5 };
+      if (prevRailA) {
+        ctx.strokeStyle = "#5a5a5a";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(prevRailA.x, prevRailA.y); ctx.lineTo(railA.x, railA.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(prevRailB.x, prevRailB.y); ctx.lineTo(railB.x, railB.y); ctx.stroke();
+      }
+      prevRailA = railA; prevRailB = railB;
+    }
+  }
+
+  function drawTile(row, col) {
+    var tile = grid[row][col];
+    var ox = col * TILE, oy = row * TILE;
+
+    ctx.fillStyle = ((row + col) % 2 === 0) ? "#e9e0c4" : "#e3d9ba";
+    ctx.fillRect(ox, oy, TILE, TILE);
+    ctx.strokeStyle = "rgba(120,100,60,0.15)";
+    ctx.strokeRect(ox + 0.5, oy + 0.5, TILE - 1, TILE - 1);
+
+    if (tile.type === "empty") return;
+
+    if (tile.isStationDraw || TILE_DEFS[tile.type].isStation) {
+      ctx.fillStyle = "#d8cfa8";
+      ctx.fillRect(ox + 4, oy + 4, TILE - 8, 10);
+      ctx.fillStyle = "#8b1e2b";
+      ctx.font = "bold 9px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("駅", ox + TILE / 2, oy + 12);
+    }
+
+    var edges = getConnections(tile);
+    for (var i = 0; i < edges.length; i++) {
+      drawTrackPath(edgePath(row, col, edges[i][0], edges[i][1]));
+    }
+  }
+
+  function drawGrid() {
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) drawTile(r, c);
+    }
+  }
+
+  // ---------- 電車 ----------
+  function seriesById(id) {
+    for (var i = 0; i < TRAIN_SERIES.length; i++) {
+      if (TRAIN_SERIES[i].id === id) return TRAIN_SERIES[i];
+    }
+    return TRAIN_SERIES[0];
+  }
+
+  function findAnyTrackCell() {
+    var candidates = [];
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        if (grid[r][c].type !== "empty") candidates.push({ row: r, col: c });
+      }
+    }
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  function spawnTrain(seriesId) {
+    if (trains.length >= 24) return;
+    var cell = findAnyTrackCell();
+    if (!cell) { alert("先に線路を配置してください。"); return; }
+    var edges = getConnections(grid[cell.row][cell.col]);
+    if (edges.length === 0) return;
+    var edge = edges[0];
+    trains.push({
+      id: trainSeq++,
+      series: seriesId,
+      row: cell.row,
+      col: cell.col,
+      entrySide: edge[0],
+      heading: edge[1],
+      progress: Math.random(),
+      dwelling: false,
+      dwellTimer: 0
+    });
+    renderTrainList();
+    saveState();
+  }
+
+  function removeTrain(id) {
+    trains = trains.filter(function (t) { return t.id !== id; });
+    renderTrainList();
+    saveState();
+  }
+
+  function nextHeading(tile, entrySide, prevHeading) {
+    var edges = getConnections(tile);
+    var candidates = [];
+    for (var i = 0; i < edges.length; i++) {
+      var e = edges[i];
+      if (e[0] === entrySide) candidates.push(e[1]);
+      else if (e[1] === entrySide) candidates.push(e[0]);
+    }
+    if (candidates.length === 0) return null;
+    if (candidates.length === 1) return candidates[0];
+    if (candidates.indexOf(prevHeading) !== -1) return prevHeading;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  function updateTrain(t, dt) {
+    if (t.dwelling) {
+      t.dwellTimer -= dt;
+      if (t.dwellTimer <= 0) t.dwelling = false;
+      return;
+    }
+    t.progress += dt * 0.9;
+    if (t.progress < 1) return;
+
+    var next = neighborCell(t.row, t.col, t.heading);
+    if (!inBounds(next.row, next.col) || grid[next.row][next.col].type === "empty") {
+      // 行き止まり: Uターン
+      t.heading = opposite(t.heading);
+      t.entrySide = opposite(t.entrySide);
+      t.progress = 0;
+      return;
+    }
+    var entrySide = opposite(t.heading);
+    var nh = nextHeading(grid[next.row][next.col], entrySide, t.heading);
+    if (nh === null) {
+      t.heading = opposite(t.heading);
+      t.entrySide = opposite(t.entrySide);
+      t.progress = 0;
+      return;
+    }
+    t.row = next.row;
+    t.col = next.col;
+    t.entrySide = entrySide;
+    t.heading = nh;
+    t.progress = 0;
+    if (TILE_DEFS[grid[t.row][t.col].type].isStation) {
+      t.dwelling = true;
+      t.dwellTimer = 1.4;
+    }
+  }
+
+  function drawTrain(t) {
+    var tile = grid[t.row][t.col];
+    var edges = getConnections(tile);
+    var matched = null;
+    for (var i = 0; i < edges.length; i++) {
+      var e = edges[i];
+      if ((e[0] === t.entrySide && e[1] === t.heading) || (e[1] === t.entrySide && e[0] === t.heading)) {
+        matched = e; break;
+      }
+    }
+    var path;
+    if (matched) path = edgePath(t.row, t.col, t.entrySide, t.heading);
+    else {
+      var ox = t.col * TILE, oy = t.row * TILE;
+      path = { p0: { x: ox + TILE / 2, y: oy + TILE / 2 }, p1: { x: ox + TILE / 2, y: oy + TILE / 2 }, ctrl: null };
+    }
+    var p = pointOnPath(path, t.progress);
+    var tan = tangentOnPath(path, t.progress);
+    var angle = Math.atan2(tan.y, tan.x);
+
+    var series = seriesById(t.series);
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(angle);
+
+    var w = TILE * 0.86, h = TILE * 0.42;
+    ctx.fillStyle = series.body;
+    roundRect(-w / 2, -h / 2, w, h, 6);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.25)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = series.stripe;
+    ctx.fillRect(-w / 2, -h * 0.12, w, h * 0.24);
+
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.fillRect(-w / 2 + 4, -h / 2 + 3, w * 0.28, h * 0.32);
+    ctx.fillRect(-w / 2 + w * 0.4, -h / 2 + 3, w * 0.28, h * 0.32);
+
+    ctx.restore();
+  }
+
+  function roundRect(x, y, w, h, rad) {
+    ctx.beginPath();
+    ctx.moveTo(x + rad, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rad);
+    ctx.arcTo(x + w, y + h, x, y + h, rad);
+    ctx.arcTo(x, y + h, x, y, rad);
+    ctx.arcTo(x, y, x + w, y, rad);
+    ctx.closePath();
+  }
+
+  // ---------- ループ ----------
+  var lastTime = null;
+  function loop(ts) {
+    if (lastTime === null) lastTime = ts;
+    var dt = Math.min((ts - lastTime) / 1000, 0.1);
+    lastTime = ts;
+
+    if (playing) {
+      var factor = speed * 0.9;
+      for (var i = 0; i < trains.length; i++) updateTrain(trains[i], dt * factor);
+    }
+
+    drawGrid();
+    for (var j = 0; j < trains.length; j++) drawTrain(trains[j]);
+
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- 入力 ----------
+  function cellFromEvent(evt) {
+    var rect = canvas.getBoundingClientRect();
+    var clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    var clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+    var x = (clientX - rect.left) * (canvas.width / rect.width);
+    var y = (clientY - rect.top) * (canvas.height / rect.height);
+    return { row: Math.floor(y / TILE), col: Math.floor(x / TILE) };
+  }
+
+  function handleTap(evt) {
+    evt.preventDefault();
+    var cell = cellFromEvent(evt);
+    if (!inBounds(cell.row, cell.col)) return;
+    var tile = grid[cell.row][cell.col];
+
+    if (selectedTool === "eraser") {
+      grid[cell.row][cell.col] = { type: "empty", rot: 0 };
+      saveState();
+      return;
+    }
+    if (tile.type === selectedTool) {
+      tile.rot = (tile.rot + 1) % 4;
+    } else {
+      grid[cell.row][cell.col] = { type: selectedTool, rot: 0 };
+    }
+    saveState();
+  }
+
+  canvas.addEventListener("pointerdown", handleTap);
+
+  // ---------- UIの構築 ----------
+  function buildToolIcon(canvasEl, type) {
+    var c = canvasEl.getContext("2d");
+    var size = 40;
+    canvasEl.width = size; canvasEl.height = size;
+    var savedGrid = grid, savedCtx = ctx;
+    // ミニ描画用に一時的にctx差し替え
+    ctx = c;
+    var fakeTile = { type: type, rot: 0 };
+    c.fillStyle = "#e9e0c4";
+    c.fillRect(0, 0, size, size);
+    if (type !== "eraser") {
+      if (TILE_DEFS[type].isStation) {
+        c.fillStyle = "#d8cfa8";
+        c.fillRect(3, 3, size - 6, 8);
+      }
+      var edges = TILE_DEFS[type].edges;
+      var oldTile = TILE * 1; // no-op
+      var tmp = TILE;
+      // 一時的にTILEサイズ相当のパスを直接計算(簡易版)
+      for (var i = 0; i < edges.length; i++) {
+        var a = edges[i][0], b = edges[i][1];
+        var p0 = sideMidpointRaw(a, size), p1 = sideMidpointRaw(b, size);
+        var ctrl = cornerForRaw(a, b, size);
+        c.strokeStyle = "#5a5a5a";
+        c.lineWidth = 3;
+        c.beginPath();
+        c.moveTo(p0.x, p0.y);
+        if (ctrl) c.quadraticCurveTo(ctrl.x, ctrl.y, p1.x, p1.y);
+        else c.lineTo(p1.x, p1.y);
+        c.stroke();
+      }
+    } else {
+      c.strokeStyle = "#8b1e2b";
+      c.lineWidth = 3;
+      c.beginPath(); c.moveTo(8, 8); c.lineTo(size - 8, size - 8); c.stroke();
+      c.beginPath(); c.moveTo(size - 8, 8); c.lineTo(8, size - 8); c.stroke();
+    }
+    ctx = savedCtx;
+  }
+
+  function sideMidpointRaw(dir, size) {
+    if (dir === N) return { x: size / 2, y: 0 };
+    if (dir === E) return { x: size, y: size / 2 };
+    if (dir === S) return { x: size / 2, y: size };
+    return { x: 0, y: size / 2 };
+  }
+  function cornerForRaw(a, b, size) {
+    var lo = Math.min(a, b), hi = Math.max(a, b);
+    if (lo === N && hi === E) return { x: size, y: 0 };
+    if (lo === E && hi === S) return { x: size, y: size };
+    if (lo === S && hi === W) return { x: 0, y: size };
+    if (lo === N && hi === W) return { x: 0, y: 0 };
+    return null;
+  }
+
+  function renderToolRow() {
+    var row = document.getElementById("toolRow");
+    row.innerHTML = "";
+    TOOL_ORDER.forEach(function (type) {
+      var btn = document.createElement("div");
+      btn.className = "tool-btn" + (type === selectedTool ? " active" : "");
+      var c = document.createElement("canvas");
+      buildToolIcon(c, type);
+      var label = document.createElement("div");
+      label.textContent = TOOL_LABEL[type];
+      btn.appendChild(c);
+      btn.appendChild(label);
+      btn.addEventListener("click", function (t) {
+        return function () { selectedTool = t; renderToolRow(); };
+      }(type));
+      row.appendChild(btn);
+    });
+  }
+
+  function renderTrainTypeRow() {
+    var row = document.getElementById("trainTypeRow");
+    row.innerHTML = "";
+    TRAIN_SERIES.forEach(function (s) {
+      var btn = document.createElement("div");
+      btn.className = "train-btn" + (s.id === selectedSeries ? " active" : "");
+      btn.style.background = s.body;
+      btn.style.color = (s.id === "5000" || s.id === "7000" || s.id === "8000" || s.id === "9000") ? "#5a3d1e" : "#fff";
+      btn.style.textShadow = "none";
+      btn.style.borderColor = s.stripe;
+      btn.textContent = s.name;
+      btn.addEventListener("click", function (id) {
+        return function () { selectedSeries = id; renderTrainTypeRow(); };
+      }(s.id));
+      row.appendChild(btn);
+    });
+  }
+
+  function renderTrainList() {
+    var list = document.getElementById("trainList");
+    list.innerHTML = "";
+    trains.forEach(function (t) {
+      var s = seriesById(t.series);
+      var chip = document.createElement("div");
+      chip.className = "train-chip";
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = s.stripe;
+      var label = document.createElement("span");
+      label.textContent = s.name;
+      var closeBtn = document.createElement("button");
+      closeBtn.textContent = "×";
+      closeBtn.addEventListener("click", function (id) {
+        return function () { removeTrain(id); };
+      }(t.id));
+      chip.appendChild(dot);
+      chip.appendChild(label);
+      chip.appendChild(closeBtn);
+      list.appendChild(chip);
+    });
+  }
+
+  // ---------- 保存/読込 ----------
+  var STORAGE_KEY = "keio_line_sim_v1";
+  function saveState() {
+    try {
+      var data = {
+        grid: grid,
+        trains: trains.map(function (t) {
+          return { series: t.series, row: t.row, col: t.col, entrySide: t.entrySide, heading: t.heading };
+        })
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) { /* ignore */ }
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      if (data.grid && data.grid.length === ROWS) grid = data.grid;
+      if (data.trains) {
+        trains = data.trains.map(function (t) {
+          return {
+            id: trainSeq++, series: t.series, row: t.row, col: t.col,
+            entrySide: t.entrySide, heading: t.heading, progress: 0.2,
+            dwelling: false, dwellTimer: 0
+          };
+        });
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // ---------- ボタン類 ----------
+  document.getElementById("addTrainBtn").addEventListener("click", function () {
+    spawnTrain(selectedSeries);
+  });
+  document.getElementById("clearTrainsBtn").addEventListener("click", function () {
+    if (trains.length === 0) return;
+    if (confirm("すべての電車を削除しますか？")) { trains = []; renderTrainList(); saveState(); }
+  });
+  document.getElementById("playPauseBtn").addEventListener("click", function (e) {
+    playing = !playing;
+    e.target.textContent = playing ? "⏸ 一時停止" : "▶ 再生";
+  });
+  document.getElementById("resetBtn").addEventListener("click", function () {
+    if (!confirm("線路と電車をすべて消去します。よろしいですか？")) return;
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) grid[r][c] = { type: "empty", rot: 0 };
+    trains = [];
+    renderTrainList();
+    saveState();
+  });
+  document.getElementById("speedSlider").addEventListener("input", function (e) {
+    speed = parseInt(e.target.value, 10);
+  });
+
+  // ---------- 初期化 ----------
+  loadState();
+  renderToolRow();
+  renderTrainTypeRow();
+  renderTrainList();
+  if (trains.length === 0) {
+    // 初回は簡単なループ線路をサンプルとして設置
+    var sample = [
+      [1,1,"curve",1],[1,2,"straight",0],[1,3,"straight",0],[1,4,"curve",2],
+      [2,4,"straight",1],[3,4,"curve",1],[3,3,"station",1],[3,2,"straight",0],
+      [3,1,"curve",0],[2,1,"straight",1]
+    ];
+    sample.forEach(function (s) { grid[s[0]][s[1]] = { type: s[2], rot: s[3] }; });
+    spawnTrain("5000");
+    spawnTrain("6000");
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
