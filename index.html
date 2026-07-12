@@ -2,963 +2,1274 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>フェルミ推定 参考データ辞書 | データ探偵事務所</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>京王線レール配置シミュレーター</title>
 <style>
-  :root{
-    --navy:#0d1b2a;
-    --navy2:#1b2838;
-    --accent:#4fd1c5;
-    --accent2:#f2a541;
-    --text:#e8edf2;
-    --dim:#8fa3b8;
-    --line:#2a3b4d;
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #efe8d8;
+    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+    color: #3a2e28;
+    overscroll-behavior: none;
+    user-select: none;
   }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    font-family:"Hiragino Sans","Segoe UI",sans-serif;
-    background:var(--navy);
-    color:var(--text);
-    min-height:100vh;
+  .app { max-width: 980px; margin: 0 auto; padding: 10px 10px 26px; }
+
+  header {
+    background: linear-gradient(135deg, #8b1e2b, #6e1622);
+    color: #f6ead0;
+    border-radius: 14px;
+    padding: 14px 18px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
   }
-  header{
-    padding:20px 16px 14px;
-    border-bottom:1px solid var(--line);
-    background:linear-gradient(180deg,var(--navy2),var(--navy));
+  header::after {
+    content: "";
+    position: absolute; left:0; right:0; bottom:0; height: 6px;
+    background: repeating-linear-gradient(90deg, #d4af37 0 18px, transparent 18px 26px);
+    opacity: 0.7;
   }
-  header .tag{
-    font-size:11px;
-    letter-spacing:2px;
-    color:var(--accent);
-    text-transform:uppercase;
+  header h1 { margin: 0; font-size: 19px; letter-spacing: 0.5px; }
+  header p { margin: 4px 0 0; font-size: 11.5px; opacity: 0.85; }
+
+  .panel {
+    background: #fbf7ec;
+    border: 1px solid #dcccaa;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
   }
-  header h1{
-    margin:4px 0 2px;
-    font-size:20px;
-    font-weight:700;
+  .panel-title { font-size: 12px; font-weight: bold; color: #8b1e2b; margin: 0 0 8px; }
+
+  .btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tool-btn {
+    flex: 1 1 auto;
+    min-width: 64px;
+    min-height: 46px;
+    background: #fff;
+    border: 2px solid #cbb98a;
+    border-radius: 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 4px 6px;
+    font-size: 11px;
+    color: #4a3b2a;
+    cursor: pointer;
   }
-  header p{
-    margin:0;
-    font-size:12px;
-    color:var(--dim);
-  }
-  .container{
-    max-width:720px;
-    margin:0 auto;
-    padding:16px;
-  }
-  .panel{
-    background:var(--navy2);
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:14px;
-    margin-bottom:14px;
-  }
-  .controls{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-  }
-  input[type=text], select, textarea{
-    background:var(--navy);
-    border:1px solid var(--line);
-    color:var(--text);
-    padding:9px 10px;
-    border-radius:6px;
-    font-size:14px;
-    flex:1;
-    min-width:120px;
-  }
-  select{flex:0 0 130px;}
-  button{
-    background:var(--accent);
-    color:var(--navy);
-    border:none;
-    padding:9px 14px;
-    border-radius:6px;
-    font-weight:700;
-    font-size:13px;
-    cursor:pointer;
-  }
-  button.secondary{
-    background:transparent;
-    color:var(--accent);
-    border:1px solid var(--accent);
-  }
-  .count{
-    font-size:11px;
-    color:var(--dim);
-    margin:8px 2px 0;
-  }
-  .card{
-    background:var(--navy2);
-    border:1px solid var(--line);
-    border-left:3px solid var(--accent);
-    border-radius:8px;
-    padding:12px 14px;
-    margin-bottom:8px;
-    position:relative;
-  }
-  .card-actions{
-    display:flex;
-    gap:6px;
-    justify-content:flex-end;
-    margin-bottom:4px;
-  }
-  .card-actions button{
-    padding:4px 9px;
-    font-size:11px;
-    font-weight:600;
-  }
-  .card .cat{
-    font-size:10px;
-    color:var(--accent2);
-    letter-spacing:1px;
-    text-transform:uppercase;
-  }
-  .card .term{
-    font-size:15px;
-    font-weight:700;
-    margin:3px 0 4px;
-  }
-  .card .value{
-    font-size:22px;
-    font-weight:800;
-    color:var(--accent);
-  }
-  .card .unit{
-    font-size:12px;
-    color:var(--dim);
-    margin-left:4px;
-    font-weight:400;
-  }
-  .card .meta{
-    font-size:11px;
-    color:var(--dim);
-    margin-top:6px;
-    line-height:1.5;
-  }
-  .card .tags{
-    margin-top:6px;
-  }
-  .chip{
-    display:inline-block;
-    font-size:10px;
-    background:var(--navy);
-    border:1px solid var(--line);
-    color:var(--dim);
-    padding:2px 7px;
-    border-radius:20px;
-    margin-right:4px;
-  }
-  .copybtn{
-    background:transparent;
-    border:1px solid var(--line);
-    color:var(--dim);
-  }
-  .copybtn.done{color:var(--accent);border-color:var(--accent);}
-  .addcalcbtn{
-    background:transparent;
-    border:1px solid var(--accent2);
-    color:var(--accent2);
-  }
-  .gridaddbtn{
-    background:transparent;
-    border:1px solid #9b7ee8;
-    color:#9b7ee8;
-  }
-  details summary{
-    cursor:pointer;
-    font-size:13px;
-    color:var(--accent);
-    font-weight:700;
-    margin-bottom:10px;
-  }
-  form label{
-    display:block;
-    font-size:11px;
-    color:var(--dim);
-    margin:8px 0 3px;
-  }
-  form .row{display:flex;gap:8px;}
-  .status{font-size:12px;margin-top:8px;}
-  .status.ok{color:var(--accent);}
-  .status.err{color:#e05c5c;}
-  .empty{
-    text-align:center;
-    color:var(--dim);
-    font-size:13px;
-    padding:30px 10px;
-  }
-  .setup{
-    font-size:12px;
-    color:var(--dim);
-    line-height:1.6;
-  }
-  .setup code{
-    background:var(--navy);
-    padding:1px 5px;
-    border-radius:4px;
-    color:var(--accent2);
+  .tool-btn canvas { pointer-events: none; }
+  .tool-btn.active {
+    border-color: #8b1e2b;
+    background: #fdeceb;
+    box-shadow: 0 0 0 2px rgba(139,30,43,0.15);
   }
 
-  /* --- 計算パネル --- */
-  .calc-panel{
-    border:1px solid var(--accent);
-    background:linear-gradient(180deg,rgba(79,209,197,0.08),var(--navy2));
+  .train-btn {
+    flex: 1 1 auto; min-width: 78px;
+    border-radius: 10px; border: 2px solid #cbb98a;
+    padding: 6px 8px; font-size: 11px; text-align: center;
+    cursor: pointer; color: #fff; font-weight: bold;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.35);
   }
-  .calc-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:8px;
+  .train-btn.active { outline: 3px solid #d4af37; outline-offset: 1px; }
+
+  .train-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .train-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: #fff; border: 1px solid #dcccaa; border-radius: 20px;
+    padding: 4px 8px 4px 10px; font-size: 11px;
   }
-  .calc-header h2{
-    font-size:13px;
-    margin:0;
-    color:var(--accent);
-    letter-spacing:1px;
+  .train-chip .dot { width: 10px; height: 10px; border-radius: 50%; display:inline-block; }
+  .train-chip button {
+    border: none; background: #e8d9d9; color: #8b1e2b; border-radius: 50%;
+    width: 18px; height: 18px; font-size: 11px; line-height: 1; cursor: pointer;
   }
-  .calc-empty{
-    font-size:12px;
-    color:var(--dim);
-    padding:10px 2px;
+
+  .canvas-wrap {
+    background: #fbf7ec;
+    border: 1px solid #dcccaa;
+    border-radius: 12px;
+    padding: 8px;
+    overflow-x: auto;
+    margin-bottom: 10px;
   }
-  .factor-row{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    background:var(--navy);
-    border:1px solid var(--line);
-    border-radius:6px;
-    padding:8px 9px;
-    margin-bottom:6px;
+  #board { display: block; touch-action: manipulation; border-radius: 6px; }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
   }
-  .factor-row .frow-top{
-    display:flex;
-    align-items:center;
-    gap:6px;
+  .controls .grow { flex: 1 1 160px; display: flex; align-items: center; gap: 8px; }
+  .controls label { font-size: 11px; color: #6e5a44; white-space: nowrap; }
+  input[type=range] { flex: 1; accent-color: #8b1e2b; }
+  .icon-btn {
+    background: #8b1e2b; color: #f6ead0; border: none; border-radius: 9px;
+    padding: 9px 12px; font-size: 12px; font-weight: bold; cursor: pointer;
+    min-height: 42px;
   }
-  .factor-row .frow-bottom{
-    display:flex;
-    align-items:center;
-    gap:6px;
-  }
-  .factor-row select.op{
-    flex:0 0 48px;
-    width:48px;
-    padding:5px 2px;
-    font-size:15px;
-    text-align:center;
-    font-weight:700;
-    color:var(--accent2);
-  }
-  .factor-row .op-spacer{
-    flex:0 0 48px;
-    width:48px;
-  }
-  .factor-row input.flabel{
-    flex:1 1 auto;
-    min-width:0;
-    width:100%;
-    background:transparent;
-    border:none;
-    border-bottom:1px dashed var(--line);
-    color:var(--text);
-    font-size:13px;
-    font-weight:600;
-    padding:4px 2px;
-  }
-  .factor-row input.flabel:focus{
-    border-bottom:1px solid var(--accent);
-    outline:none;
-  }
-  .factor-row input.fval{
-    flex:1 1 auto;
-    min-width:0;
-    padding:6px 8px;
-    font-size:13px;
-    text-align:right;
-  }
-  .factor-row .funit{
-    flex:0 0 auto;
-    font-size:11px;
-    color:var(--dim);
-    min-width:32px;
-    text-align:left;
-  }
-  .factor-row .frm{
-    flex:0 0 auto;
-    background:transparent;
-    border:none;
-    color:var(--dim);
-    font-size:15px;
-    padding:2px 6px;
-  }
-  .calc-result{
-    margin-top:10px;
-    padding:12px;
-    background:var(--navy);
-    border:1px dashed var(--accent);
-    border-radius:8px;
-    text-align:center;
-  }
-  .calc-result .rval{
-    font-size:26px;
-    font-weight:800;
-    color:var(--accent);
-  }
-  .calc-result .rjp{
-    font-size:12px;
-    color:var(--dim);
-    margin-top:2px;
-  }
-  .calc-actions{
-    display:flex;
-    gap:8px;
-    margin-top:10px;
-  }
-  /* --- 9マス因数分解 --- */
-  .mandala-grid{
-    display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:6px;
-    margin-top:4px;
-  }
-  .mcell{
-    background:var(--navy);
-    border:1px solid var(--line);
-    border-radius:8px;
-    padding:6px;
-    aspect-ratio:1;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    gap:3px;
-    position:relative;
-  }
-  .mcell.center{
-    background:linear-gradient(160deg,rgba(242,165,65,0.15),var(--navy));
-    border:1px solid var(--accent2);
-  }
-  .mcell.center textarea{
-    background:transparent;
-    border:none;
-    color:var(--accent2);
-    font-weight:700;
-    font-size:12px;
-    resize:none;
-    width:100%;
-    height:100%;
-    text-align:center;
-    padding:0;
-  }
-  .mcell input.mlabel{
-    background:transparent;
-    border:none;
-    border-bottom:1px dashed var(--line);
-    color:var(--dim);
-    font-size:10px;
-    padding:2px 0;
-    width:100%;
-    text-align:center;
-  }
-  .mcell input.mvalue{
-    background:transparent;
-    border:none;
-    color:var(--accent);
-    font-size:15px;
-    font-weight:800;
-    text-align:center;
-    width:100%;
-    padding:1px 0;
-  }
-  .mcell input.munit{
-    background:transparent;
-    border:none;
-    color:var(--dim);
-    font-size:10px;
-    text-align:center;
-    width:100%;
-    padding:0;
-  }
-  .mcell .mrm{
-    position:absolute;
-    top:2px;
-    right:4px;
-    background:transparent;
-    border:none;
-    color:var(--dim);
-    font-size:11px;
-    padding:0;
-  }
-  .mandala-result{
-    margin-top:10px;
-    padding:12px;
-    background:var(--navy);
-    border:1px dashed var(--accent2);
-    border-radius:8px;
-    text-align:center;
-  }
-  .mandala-result .rval{
-    font-size:24px;
-    font-weight:800;
-    color:var(--accent2);
-  }
-  .mandala-result .rjp{
-    font-size:12px;
-    color:var(--dim);
-    margin-top:2px;
-  }
+  .icon-btn.secondary { background: #fff; color: #8b1e2b; border: 2px solid #8b1e2b; }
+  .icon-btn.ghost { background: #efe4c8; color: #6e5a44; border: none; }
+
+  .hint { font-size: 10.5px; color: #8a7a5f; margin-top: 6px; line-height: 1.5; }
 </style>
 </head>
 <body>
+<div class="app">
 
-<header>
-  <div class="tag">データ探偵事務所</div>
-  <h1>フェルミ推定 参考データ辞書</h1>
-  <p>人口統計・市場規模などの数値を蓄積して検索できる辞書ツール</p>
-</header>
+  <header>
+    <h1>🚃 京王線レール配置シミュレーター</h1>
+    <p>線路を自由に配置して、2000系〜9000系を走らせよう</p>
+  </header>
 
-<div class="container">
-
-  <div class="panel" id="setupPanel">
-    <div class="setup">
-      <strong style="color:var(--text)">初回セットアップ</strong><br>
-      1. Code.gs をスプレッドシートの拡張機能 &gt; Apps Script に貼り付けてデプロイ<br>
-      2. 発行されたウェブアプリURLを下に貼り付けて保存
+  <div class="panel">
+    <p class="panel-title">操作モード</p>
+    <div class="btn-row">
+      <button class="icon-btn" id="modeTileBtn" style="flex:1;">🧩 線路モード</button>
+      <button class="icon-btn secondary" id="modeFreeBtn" style="flex:1;">✏️ お絵かきモード</button>
     </div>
-    <div class="controls" style="margin-top:10px;">
-      <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/xxxx/exec">
-      <button onclick="saveGasUrl()">保存</button>
+  </div>
+
+  <div class="panel" id="tilePanel">
+    <p class="panel-title">線路パーツ</p>
+    <div class="btn-row" id="toolRow"></div>
+    <p class="hint">空マスをタップすると周囲の線路に自動で繋がる向きで設置されます／同じ種類を再タップで90°回転／複線は上下線を自動ですれ違わせます／信号機は線路の上に置いてタップで 緑→赤→なし を切替／消しゴムでタップして削除</p>
+    <div style="margin-top:8px;">
+      <button class="icon-btn secondary" id="ovalBtn" style="width:100%;">🥚 楕円コースを自動生成（現在の線路は消えます）</button>
     </div>
-    <div class="status" id="setupStatus"></div>
+  </div>
+
+  <div class="panel" id="freePanel" style="display:none;">
+    <p class="panel-title">線を描く</p>
+    <div class="btn-row" id="freeToolRow"></div>
+    <p class="hint">指でなぞって線を描くと、そこがそのままコースになります。始点と終点を近づけて描くと輪っかとして繋がり、離れたまま描くとその区間を往復します。</p>
   </div>
 
   <div class="panel">
-    <div class="controls">
-      <input type="text" id="searchInput" placeholder="項目名・タグ・出典で検索">
-      <select id="categoryFilter"><option value="">全カテゴリ</option></select>
+    <p class="panel-title">電車を追加</p>
+    <div class="btn-row" id="trainTypeRow"></div>
+    <div style="margin-top:8px; display:flex; gap:8px;">
+      <button class="icon-btn" id="addTrainBtn">＋ 配置モード開始</button>
+      <button class="icon-btn ghost" id="clearTrainsBtn">全車両を削除</button>
     </div>
-    <div class="count" id="countLabel"></div>
-    <div style="margin-top:6px;">
-      <button class="secondary" onclick="reopenSetup()" style="font-size:11px;padding:4px 9px;">GASのURLを再設定</button>
-    </div>
+    <p class="hint" id="statusMsg" style="min-height:14px;"></p>
+    <div class="train-list" id="trainList"></div>
   </div>
 
-  <div class="panel calc-panel">
-    <div class="calc-header">
-      <h2>🧮 フェルミ推定 計算式</h2>
-      <button class="secondary" onclick="clearCalc()" style="padding:4px 10px;font-size:11px;">クリア</button>
-    </div>
-    <div id="calcFactors"></div>
-    <div class="calc-result" id="calcResult" style="display:none;">
-      <div class="rval" id="calcResultVal"></div>
-      <div class="rjp" id="calcResultJp"></div>
-    </div>
-    <div class="calc-actions">
-      <button class="secondary" onclick="collapseToSubtotal()" style="flex:1;" id="subtotalBtn" disabled>この結果を次の項目にする</button>
-      <button class="secondary" onclick="addManualFactor()" style="flex:1;">+ 手動で値を追加</button>
-    </div>
-    <div class="calc-actions">
-      <button onclick="openSaveCalc()" style="flex:1;" id="saveCalcBtn" disabled>結果を辞書に保存</button>
-    </div>
-    <div id="saveCalcForm" style="display:none;margin-top:10px;">
-      <input type="text" id="calcResultTerm" placeholder="項目名(例: 阿佐ヶ谷駅 想定市場規模)">
-      <div class="controls" style="margin-top:6px;">
-        <input type="text" id="calcResultCategory" placeholder="カテゴリ(例: フェルミ推定結果)" value="フェルミ推定結果">
-        <button onclick="submitCalcSave()">保存</button>
-      </div>
-      <div class="status" id="calcSaveStatus"></div>
-    </div>
+  <div class="canvas-wrap">
+    <canvas id="board"></canvas>
   </div>
 
-  <div class="panel">
-    <div class="calc-header">
-      <h2 style="color:#9b7ee8;">🔢 因数分解(9マス)</h2>
-      <button class="secondary" onclick="clearGrid()" style="padding:4px 10px;font-size:11px;">クリア</button>
+  <div class="panel controls">
+    <div class="grow">
+      <label>速度</label>
+      <input type="range" id="speedSlider" min="1" max="10" value="4">
     </div>
-    <div class="mandala-grid" id="mandalaGrid"></div>
-    <div class="mandala-result" id="mandalaResult" style="display:none;">
-      <div class="rval" id="mandalaResultVal"></div>
-      <div class="rjp" id="mandalaResultJp"></div>
-    </div>
-    <div class="calc-actions">
-      <button onclick="openSaveGrid()" style="flex:1;" id="saveGridBtn" disabled>結果を辞書に保存</button>
-    </div>
-    <div id="saveGridForm" style="display:none;margin-top:10px;">
-      <input type="text" id="gridResultCategory" placeholder="カテゴリ(例: フェルミ推定結果)" value="フェルミ推定結果">
-      <div class="status" id="gridSaveStatus"></div>
-      <button style="margin-top:6px;width:100%;" onclick="submitGridSave()">保存(項目名はお題を使用)</button>
-    </div>
+    <button class="icon-btn secondary" id="playPauseBtn">⏸ 一時停止</button>
+    <button class="icon-btn ghost" id="signalModeBtn">信号:手動</button>
+    <button class="icon-btn ghost" id="resetBtn">🗑 全消去</button>
   </div>
 
-  <div id="results"></div>
-
-  <div class="panel">
-    <details>
-      <summary>+ 新しいデータを辞書に追加</summary>
-      <form id="addForm">
-        <label>カテゴリ</label>
-        <input type="text" id="f_category" placeholder="例: 人口統計 / 市場規模 / 単価">
-        <label>項目名</label>
-        <input type="text" id="f_term" placeholder="例: 阿佐ヶ谷駅 1日乗降客数">
-        <div class="row">
-          <div style="flex:1">
-            <label>値</label>
-            <input type="text" id="f_value" placeholder="例: 45000">
-          </div>
-          <div style="flex:1">
-            <label>単位</label>
-            <input type="text" id="f_unit" placeholder="例: 人/日">
-          </div>
-        </div>
-        <label>出典</label>
-        <input type="text" id="f_source" placeholder="例: JR東日本 2024年度データ">
-        <div class="row">
-          <div style="flex:1">
-            <label>年</label>
-            <input type="text" id="f_year" placeholder="例: 2024">
-          </div>
-          <div style="flex:2">
-            <label>タグ(カンマ区切り)</label>
-            <input type="text" id="f_tags" placeholder="例: 中央線,駅,交通">
-          </div>
-        </div>
-        <label>備考</label>
-        <textarea id="f_notes" rows="2" placeholder="計算での使い方や注意点など"></textarea>
-        <div style="margin-top:10px;display:flex;gap:8px;">
-          <button type="submit">辞書に追加</button>
-          <button type="button" class="secondary" onclick="refreshData()">再読込</button>
-        </div>
-        <div class="status" id="addStatus"></div>
-      </form>
-    </details>
-  </div>
-
+  <p class="hint" style="text-align:center;">iPadのSafariで開くとホーム画面に追加できます。配置内容は自動保存されます。</p>
 </div>
 
 <script>
-let allItems = [];
-let currentFiltered = [];
-let calcFactors = [];
-let GAS_URL = localStorage.getItem('fermiDictGasUrl') || '';
+(function () {
+  "use strict";
 
+  // ---------- 基本設定 ----------
+  var COLS = 13, ROWS = 9, TILE = 48;
+  var N = 0, E = 1, S = 2, W = 3;
 
-function parseNum(v){
-  const n = parseFloat(String(v).replace(/,/g, ''));
-  return isNaN(n) ? 0 : n;
-}
-
-function addFactorFromItem(idx){
-  const item = currentFiltered[idx];
-  if(!item) return;
-  calcFactors.push({
-    label: item['項目名'] || '(無題)',
-    value: parseNum(item['値']),
-    unit: item['単位'] || '',
-    op: calcFactors.length === 0 ? '×' : '×'
-  });
-  renderCalc();
-}
-
-function addManualFactor(){
-  calcFactors.push({ label: '手動入力', value: 1, unit: '', op: '×' });
-  renderCalc();
-}
-
-function removeFactor(i){
-  calcFactors.splice(i, 1);
-  renderCalc();
-}
-
-function updateFactorValue(i, val){
-  calcFactors[i].value = parseNum(val);
-  renderCalc();
-}
-
-function updateFactorOp(i, op){
-  calcFactors[i].op = op;
-  renderCalc();
-}
-
-function updateFactorLabel(i, val){
-  calcFactors[i].label = val;
-}
-
-// --- 9マス因数分解(表示専用。中身は上の「計算式」と同じcalcFactorsを使う) ---
-let gridTopic = '';
-
-function renderGrid(){
-  const order = [0,1,2, 3,'center',4, 5,6,7]; // 3x3表示順。'center'はお題マス
-  const container = document.getElementById('mandalaGrid');
-  container.innerHTML = order.map(pos => {
-    if(pos === 'center'){
-      return `<div class="mcell center">
-        <textarea placeholder="お題(例: 阿佐ヶ谷の美容室市場規模は?)" onchange="updateGridTopic(this.value)">${escapeHtml(gridTopic)}</textarea>
-      </div>`;
-    }
-    const f = calcFactors[pos];
-    if(!f){
-      return `<div class="mcell"><div style="text-align:center;font-size:10px;color:var(--dim);">空き</div></div>`;
-    }
-    return `<div class="mcell">
-      <div style="text-align:center;font-size:10px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(f.label)}</div>
-      <div style="text-align:center;font-size:15px;font-weight:800;color:var(--accent);">${formatNumber(f.value)}</div>
-      <div style="text-align:center;font-size:10px;color:var(--dim);">${escapeHtml(f.unit)}</div>
-    </div>`;
-  }).join('');
-
-  const resultBox = document.getElementById('mandalaResult');
-  const saveBtn = document.getElementById('saveGridBtn');
-  if(calcFactors.length === 0){
-    resultBox.style.display = 'none';
-    saveBtn.disabled = true;
-    document.getElementById('saveGridForm').style.display = 'none';
-    return;
-  }
-  resultBox.style.display = 'block';
-  document.getElementById('mandalaResultVal').textContent = formatNumber(window._lastCalcResult);
-  document.getElementById('mandalaResultJp').textContent = formatJP(window._lastCalcResult);
-  saveBtn.disabled = false;
-  window._lastGridResult = window._lastCalcResult;
-}
-
-function updateGridTopic(val){
-  gridTopic = val;
-}
-
-function clearGrid(){
-  gridTopic = '';
-  clearCalc();
-}
-function openSaveGrid(){
-  const form = document.getElementById('saveGridForm');
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
-}
-async function submitGridSave(){
-  const statusEl = document.getElementById('gridSaveStatus');
-  const term = gridTopic.trim() || '因数分解の推定結果';
-  const category = document.getElementById('gridResultCategory').value.trim() || 'フェルミ推定結果';
-  if(!GAS_URL){
-    statusEl.textContent = '先にGASのURLを設定してください';
-    statusEl.className = 'status err';
-    return;
-  }
-  const formula = calcFactors.map((f, i) => (i===0 ? '' : ' ' + f.op + ' ') + f.value + (f.unit || '') + `(${f.label})`).join('');
-  const payload = {
-    category: category,
-    term: term,
-    value: Math.round(window._lastGridResult * 100) / 100,
-    unit: '',
-    source: 'フェルミ推定 因数分解(9マス)',
-    year: '',
-    notes: 'お題: ' + term + ' / 計算式: ' + formula,
-    tags: 'フェルミ推定,因数分解'
+  var TILE_DEFS = {
+    empty:     { edges: [] },
+    straight:  { edges: [[N, S]] },
+    curve:     { edges: [[N, E]] },
+    t:         { edges: [[N, E], [E, S], [S, N]] },
+    cross:     { edges: [[N, S], [E, W]] },
+    station:   { edges: [[N, S]], isStation: true },
+    dstraight: { edges: [[N, S]], double: true },
+    dcurve:    { edges: [[N, E]], double: true }
   };
-  statusEl.textContent = '送信中...';
-  statusEl.className = 'status ok';
-  try{
-    const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-    const data = await res.json();
-    if(data.status !== 'ok') throw new Error(data.message || '送信エラー');
-    statusEl.textContent = '辞書に保存しました';
-    statusEl.className = 'status ok';
-    refreshData();
-  }catch(err){
-    statusEl.textContent = 'エラー: ' + err.message;
-    statusEl.className = 'status err';
-  }
-}
 
-function collapseToSubtotal(){
-  if(calcFactors.length === 0) return;
-  const result = window._lastCalcResult;
-  calcFactors = [{ label: '小計', value: Math.round(result * 100) / 100, unit: '', op: '×' }];
-  renderCalc();
-}
-
-function clearCalc(){
-  calcFactors = [];
-  renderCalc();
-}
-
-function renderCalc(){
-  const container = document.getElementById('calcFactors');
-  if(calcFactors.length === 0){
-    container.innerHTML = '<div class="calc-empty">辞書カードの「計算へ+」、または「手動で値を追加」で計算式を組み立てます</div>';
-    document.getElementById('calcResult').style.display = 'none';
-    document.getElementById('saveCalcBtn').disabled = true;
-    document.getElementById('subtotalBtn').disabled = true;
-    document.getElementById('saveCalcForm').style.display = 'none';
-    renderGrid();
-    return;
-  }
-  container.innerHTML = calcFactors.map((f, i) => `
-    <div class="factor-row">
-      <div class="frow-top">
-        ${i === 0
-          ? '<span class="op-spacer"></span>'
-          : `<select class="op" onchange="updateFactorOp(${i}, this.value)">
-              <option value="×" ${f.op==='×'?'selected':''}>×</option>
-              <option value="÷" ${f.op==='÷'?'selected':''}>÷</option>
-              <option value="+" ${f.op==='+'?'selected':''}>+</option>
-              <option value="−" ${f.op==='−'?'selected':''}>−</option>
-            </select>`
-        }
-        <input type="text" class="flabel" placeholder="項目名(例: 客単価)" value="${escapeAttr(f.label)}" onchange="updateFactorLabel(${i}, this.value)">
-      </div>
-      <div class="frow-bottom">
-        <span class="op-spacer"></span>
-        <input type="text" class="fval" value="${f.value}" onchange="updateFactorValue(${i}, this.value)">
-        <div class="funit">${escapeHtml(f.unit)}</div>
-        <button class="frm" onclick="removeFactor(${i})">✕</button>
-      </div>
-    </div>
-  `).join('');
-
-  let result = calcFactors[0].value;
-  for(let i = 1; i < calcFactors.length; i++){
-    const f = calcFactors[i];
-    if(f.op === '×') result *= f.value;
-    else if(f.op === '÷') result = f.value !== 0 ? result / f.value : 0;
-    else if(f.op === '+') result += f.value;
-    else if(f.op === '−') result -= f.value;
-  }
-
-  document.getElementById('calcResult').style.display = 'block';
-  document.getElementById('calcResultVal').textContent = formatNumber(result);
-  document.getElementById('calcResultJp').textContent = formatJP(result);
-  document.getElementById('saveCalcBtn').disabled = false;
-  document.getElementById('subtotalBtn').disabled = false;
-  window._lastCalcResult = result;
-  renderGrid();
-}
-
-function formatNumber(n){
-  return Math.round(n * 100) / 100 === Math.round(n)
-    ? Math.round(n).toLocaleString('ja-JP')
-    : (Math.round(n * 100) / 100).toLocaleString('ja-JP');
-}
-
-function formatJP(n){
-  const abs = Math.abs(n);
-  if(abs >= 1e8){
-    return (n / 1e8).toFixed(2) + '億';
-  } else if(abs >= 1e4){
-    return (n / 1e4).toFixed(1) + '万';
-  }
-  return '';
-}
-
-function openSaveCalc(){
-  const form = document.getElementById('saveCalcForm');
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
-}
-
-async function submitCalcSave(){
-  const term = document.getElementById('calcResultTerm').value.trim();
-  const category = document.getElementById('calcResultCategory').value.trim() || 'フェルミ推定結果';
-  const statusEl = document.getElementById('calcSaveStatus');
-  if(!term){
-    statusEl.textContent = '項目名を入力してください';
-    statusEl.className = 'status err';
-    return;
-  }
-  if(!GAS_URL){
-    statusEl.textContent = '先にGASのURLを設定してください';
-    statusEl.className = 'status err';
-    return;
-  }
-  const formula = calcFactors.map((f, i) => (i===0 ? '' : ' ' + f.op + ' ') + f.value + (f.unit ? f.unit : '') + (f.label ? `(${f.label})` : '')).join('');
-  const payload = {
-    category: category,
-    term: term,
-    value: Math.round(window._lastCalcResult * 100) / 100,
-    unit: '',
-    source: 'フェルミ推定計算(辞書データより算出)',
-    year: '',
-    notes: '計算式: ' + formula,
-    tags: 'フェルミ推定,計算結果'
+  var TOOL_ORDER = ["straight", "curve", "t", "cross", "station", "dstraight", "dcurve", "signal", "eraser"];
+  var TOOL_LABEL = {
+    straight: "直線", curve: "カーブ", t: "分岐",
+    cross: "交差", station: "駅",
+    dstraight: "複線直線", dcurve: "複線カーブ",
+    signal: "信号機", eraser: "消去"
   };
-  statusEl.textContent = '送信中...';
-  statusEl.className = 'status ok';
-  try{
-    const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
-    const data = await res.json();
-    if(data.status !== 'ok') throw new Error(data.message || '送信エラー');
-    statusEl.textContent = '辞書に保存しました';
-    statusEl.className = 'status ok';
-    document.getElementById('calcResultTerm').value = '';
-    refreshData();
-  }catch(err){
-    statusEl.textContent = 'エラー: ' + err.message;
-    statusEl.className = 'status err';
-  }
-}
 
-function initSetupPanel(){
-  const panel = document.getElementById('setupPanel');
-  if (GAS_URL){
-    document.getElementById('gasUrlInput').value = GAS_URL;
-    panel.style.display = 'none';
-  }
-}
+  var TRAIN_SERIES = [
+    { id: "2000", name: "2000系",  body: "#3f6b3a", stripe: "#e8e2c8" },
+    { id: "5000", name: "5000系",  body: "#f2efe4", stripe: "#1e5fa8" },
+    { id: "6000", name: "6000系",  body: "#f0ead6", stripe: "#8b1e2b" },
+    { id: "7000", name: "7000系",  body: "#eae4d0", stripe: "#8b1e2b" },
+    { id: "8000", name: "8000系",  body: "#efe9d8", stripe: "#c23a5a" },
+    { id: "9000", name: "9000系",  body: "#eae6dc", stripe: "#233e7a" }
+  ];
 
-function reopenSetup(){
-  document.getElementById('setupPanel').style.display = 'block';
-  document.getElementById('setupStatus').textContent = '';
-  window.scrollTo(0, 0);
-}
-
-function saveGasUrl(){
-  const url = document.getElementById('gasUrlInput').value.trim();
-  if(!url){ return; }
-  GAS_URL = url;
-  localStorage.setItem('fermiDictGasUrl', url);
-  document.getElementById('setupStatus').textContent = '保存しました。データを読み込みます...';
-  document.getElementById('setupStatus').className = 'status ok';
-  refreshData();
-}
-
-async function refreshData(){
-  if(!GAS_URL){
-    document.getElementById('results').innerHTML = '<div class="empty">上のセットアップ欄にGASのウェブアプリURLを入力してください</div>';
-    return;
-  }
-  document.getElementById('results').innerHTML = '<div class="empty">読み込み中...</div>';
-  try{
-    const res = await fetch(GAS_URL);
-    const data = await res.json();
-    if(data.status !== 'ok') throw new Error(data.message || '取得エラー');
-    allItems = data.items || [];
-    document.getElementById('setupPanel').style.display = 'none';
-    populateCategories();
-    renderResults();
-  }catch(err){
-    document.getElementById('results').innerHTML =
-      '<div class="empty">読み込みに失敗しました: ' + escapeHtml(err.message) + '<br>URLやデプロイ設定(全員がアクセス可)を確認してください</div>';
-  }
-}
-
-function populateCategories(){
-  const sel = document.getElementById('categoryFilter');
-  const cats = [...new Set(allItems.map(i => i['カテゴリ']).filter(Boolean))].sort();
-  sel.innerHTML = '<option value="">全カテゴリ</option>' +
-    cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-}
-
-function renderResults(){
-  const q = document.getElementById('searchInput').value.trim().toLowerCase();
-  const cat = document.getElementById('categoryFilter').value;
-
-  const filtered = allItems.filter(item => {
-    if(cat && item['カテゴリ'] !== cat) return false;
-    if(!q) return true;
-    const haystack = [item['項目名'], item['タグ'], item['出典'], item['備考']]
-      .join(' ').toLowerCase();
-    return haystack.includes(q);
-  });
-
-  document.getElementById('countLabel').textContent = `${filtered.length} 件 / 全${allItems.length}件`;
-  currentFiltered = filtered;
-
-  const container = document.getElementById('results');
-  if(filtered.length === 0){
-    container.innerHTML = '<div class="empty">該当するデータがありません</div>';
-    return;
+  // ---------- 状態 ----------
+  var grid = [];
+  for (var r = 0; r < ROWS; r++) {
+    var row = [];
+    for (var c = 0; c < COLS; c++) row.push({ type: "empty", rot: 0 });
+    grid.push(row);
   }
 
-  container.innerHTML = filtered.map((item, idx) => {
-    const tags = (item['タグ'] || '').split(',').map(t => t.trim()).filter(Boolean);
-    return `
-      <div class="card">
-        <div class="card-actions">
-          <button class="addcalcbtn" onclick="addFactorFromItem(${idx})">計算へ+</button>
-          <button class="copybtn" onclick="copyValue(this, '${escapeAttr(item['値'])}')">コピー</button>
-        </div>
-        <div class="cat">${escapeHtml(item['カテゴリ'] || '未分類')}</div>
-        <div class="term">${escapeHtml(item['項目名'] || '')}</div>
-        <div><span class="value">${escapeHtml(item['値'] || '-')}</span><span class="unit">${escapeHtml(item['単位'] || '')}</span></div>
-        <div class="meta">
-          ${item['出典'] ? '出典: ' + escapeHtml(item['出典']) : ''}
-          ${item['年'] ? '(' + escapeHtml(item['年']) + '年)' : ''}
-          ${item['備考'] ? '<br>' + escapeHtml(item['備考']) : ''}
-        </div>
-        ${tags.length ? '<div class="tags">' + tags.map(t => `<span class="chip">${escapeHtml(t)}</span>`).join('') + '</div>' : ''}
-      </div>
-    `;
-  }).join('');
-}
+  var selectedTool = "straight";
+  var selectedSeries = TRAIN_SERIES[0].id;
+  var trains = [];
+  var trainSeq = 1;
+  var playing = true;
+  var speed = 4;
+  var signals = {};           // key "row,col" -> { state: 'green'|'red', phase: number }
+  var signalAutoMode = false;
+  var placingTrainSeries = null;
+  var totalTime = 0;
 
-function copyValue(btn, value){
-  navigator.clipboard.writeText(value).then(() => {
-    const orig = btn.textContent;
-    btn.textContent = '✓ コピー済';
-    btn.classList.add('done');
-    setTimeout(() => { btn.textContent = orig; btn.classList.remove('done'); }, 1500);
-  });
-}
+  // お絵かきモード用の状態
+  var mode = "tile"; // "tile" | "free"
+  var freePaths = [];      // { id, points:[{x,y}], cum:[...], closed:bool }
+  var freePathSeq = 1;
+  var freeTrains = [];     // { id, series, pathId, dist, dir }
+  var selectedFreeTool = "draw"; // "draw" | "eraser"
+  var drawingPoints = null; // 現在ドラッグ中の点列(未確定)
 
-document.getElementById('searchInput').addEventListener('input', renderResults);
-document.getElementById('categoryFilter').addEventListener('change', renderResults);
+  var canvas = document.getElementById("board");
+  var ctx = canvas.getContext("2d");
+  canvas.width = COLS * TILE;
+  canvas.height = ROWS * TILE;
 
-document.getElementById('addForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if(!GAS_URL){
-    setAddStatus('先にGASのURLを設定してください', false);
-    return;
+  // ---------- ユーティリティ ----------
+  function opposite(d) { return (d + 2) % 4; }
+
+  function setStatus(text) {
+    var el = document.getElementById("statusMsg");
+    if (el) el.textContent = text;
   }
-  const payload = {
-    category: document.getElementById('f_category').value.trim(),
-    term: document.getElementById('f_term').value.trim(),
-    value: document.getElementById('f_value').value.trim(),
-    unit: document.getElementById('f_unit').value.trim(),
-    source: document.getElementById('f_source').value.trim(),
-    year: document.getElementById('f_year').value.trim(),
-    notes: document.getElementById('f_notes').value.trim(),
-    tags: document.getElementById('f_tags').value.trim()
-  };
-  if(!payload.term || !payload.value){
-    setAddStatus('項目名と値は必須です', false);
-    return;
+
+  function getSignalState(key) {
+    var sig = signals[key];
+    if (!sig) return null;
+    if (!signalAutoMode) return sig.state;
+    var cyclePos = Math.floor((totalTime + sig.phase) / 3) % 2;
+    return cyclePos === 0 ? "green" : "red";
   }
-  setAddStatus('送信中...', true);
-  try{
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify(payload)
+
+  function getConnections(tile) {
+    var def = TILE_DEFS[tile.type];
+    if (!def) return [];
+    return def.edges.map(function (e) {
+      return [(e[0] + tile.rot) % 4, (e[1] + tile.rot) % 4];
     });
-    const data = await res.json();
-    if(data.status !== 'ok') throw new Error(data.message || '送信エラー');
-    setAddStatus('追加しました', true);
-    document.getElementById('addForm').reset();
-    refreshData();
-  }catch(err){
-    setAddStatus('エラー: ' + err.message, false);
   }
-});
 
-function setAddStatus(msg, ok){
-  const el = document.getElementById('addStatus');
-  el.textContent = msg;
-  el.className = 'status ' + (ok ? 'ok' : 'err');
-}
+  function neighborCell(row, col, dir) {
+    if (dir === N) return { row: row - 1, col: col };
+    if (dir === E) return { row: row, col: col + 1 };
+    if (dir === S) return { row: row + 1, col: col };
+    return { row: row, col: col - 1 };
+  }
 
-function escapeHtml(str){
-  if(str === undefined || str === null) return '';
-  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-function escapeAttr(str){
-  return String(str || '').replace(/'/g, "\\'");
-}
+  function inBounds(row, col) {
+    return row >= 0 && row < ROWS && col >= 0 && col < COLS;
+  }
 
-initSetupPanel();
-renderCalc();
-renderGrid();
-if(GAS_URL) refreshData();
+  function sideMidpoint(dir, ox, oy) {
+    if (dir === N) return { x: ox + TILE / 2, y: oy };
+    if (dir === E) return { x: ox + TILE, y: oy + TILE / 2 };
+    if (dir === S) return { x: ox + TILE / 2, y: oy + TILE };
+    return { x: ox, y: oy + TILE / 2 };
+  }
+
+  function cornerFor(a, b, ox, oy) {
+    var lo = Math.min(a, b), hi = Math.max(a, b);
+    if (lo === N && hi === E) return { x: ox + TILE, y: oy };
+    if (lo === E && hi === S) return { x: ox + TILE, y: oy + TILE };
+    if (lo === S && hi === W) return { x: ox, y: oy + TILE };
+    if (lo === N && hi === W) return { x: ox, y: oy };
+    return null; // opposite pair -> no corner, straight line
+  }
+
+  function edgePath(row, col, a, b) {
+    var ox = col * TILE, oy = row * TILE;
+    var p0 = sideMidpoint(a, ox, oy);
+    var p1 = sideMidpoint(b, ox, oy);
+    var ctrl = cornerFor(a, b, ox, oy);
+    return { p0: p0, p1: p1, ctrl: ctrl };
+  }
+
+  function pointOnPath(path, t) {
+    if (!path.ctrl) {
+      return {
+        x: path.p0.x + (path.p1.x - path.p0.x) * t,
+        y: path.p0.y + (path.p1.y - path.p0.y) * t
+      };
+    }
+    var mt = 1 - t;
+    return {
+      x: mt * mt * path.p0.x + 2 * mt * t * path.ctrl.x + t * t * path.p1.x,
+      y: mt * mt * path.p0.y + 2 * mt * t * path.ctrl.y + t * t * path.p1.y
+    };
+  }
+
+  function tangentOnPath(path, t) {
+    if (!path.ctrl) {
+      return { x: path.p1.x - path.p0.x, y: path.p1.y - path.p0.y };
+    }
+    var mt = 1 - t;
+    return {
+      x: 2 * mt * (path.ctrl.x - path.p0.x) + 2 * t * (path.p1.x - path.ctrl.x),
+      y: 2 * mt * (path.ctrl.y - path.p0.y) + 2 * t * (path.p1.y - path.ctrl.y)
+    };
+  }
+
+  // ---------- 描画: 線路 ----------
+  function sampleTrack(path, steps) {
+    var samples = [];
+    for (var i = 0; i <= steps; i++) {
+      var t = i / steps;
+      var p = pointOnPath(path, t);
+      var tan = tangentOnPath(path, t);
+      var len = Math.sqrt(tan.x * tan.x + tan.y * tan.y) || 1;
+      samples.push({ p: p, nx: -tan.y / len, ny: tan.x / len });
+    }
+    return samples;
+  }
+
+  function drawTrack(path, isDouble) {
+    var steps = 14;
+    var samples = sampleTrack(path, steps);
+    var tieLen = isDouble ? 15 : 8;
+
+    // 共有の枕木
+    for (var i = 0; i <= steps; i += 3) {
+      var s = samples[i];
+      ctx.strokeStyle = "#7a5a3a";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(s.p.x - s.nx * tieLen, s.p.y - s.ny * tieLen);
+      ctx.lineTo(s.p.x + s.nx * tieLen, s.p.y + s.ny * tieLen);
+      ctx.stroke();
+    }
+
+    // レール(単線は中央1組、複線は左右2組)
+    var shifts = isDouble ? [-7, 7] : [0];
+    shifts.forEach(function (shift) {
+      var prevA = null, prevB = null;
+      for (var i = 0; i <= steps; i++) {
+        var s = samples[i];
+        var cx = s.p.x + s.nx * shift, cy = s.p.y + s.ny * shift;
+        var railA = { x: cx - s.nx * 4.5, y: cy - s.ny * 4.5 };
+        var railB = { x: cx + s.nx * 4.5, y: cy + s.ny * 4.5 };
+        if (prevA) {
+          ctx.strokeStyle = "#5a5a5a";
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(prevA.x, prevA.y); ctx.lineTo(railA.x, railA.y); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(prevB.x, prevB.y); ctx.lineTo(railB.x, railB.y); ctx.stroke();
+        }
+        prevA = railA; prevB = railB;
+      }
+    });
+  }
+
+  function drawSignal(row, col) {
+    var key = row + "," + col;
+    var state = getSignalState(key);
+    if (!state) return;
+    var ox = col * TILE, oy = row * TILE;
+    var px = ox + 9, py = oy + 9;
+    ctx.strokeStyle = "#4a3b2a";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(px, py + 6); ctx.lineTo(px, py - 6); ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(px, py - 8, 5, 0, Math.PI * 2);
+    ctx.fillStyle = state === "red" ? "#d23b3b" : "#3fa858";
+    ctx.fill();
+    ctx.strokeStyle = "#2a2a2a";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  function drawTile(row, col) {
+    var tile = grid[row][col];
+    var ox = col * TILE, oy = row * TILE;
+
+    ctx.fillStyle = ((row + col) % 2 === 0) ? "#e9e0c4" : "#e3d9ba";
+    ctx.fillRect(ox, oy, TILE, TILE);
+    ctx.strokeStyle = "rgba(120,100,60,0.15)";
+    ctx.strokeRect(ox + 0.5, oy + 0.5, TILE - 1, TILE - 1);
+
+    if (tile.type === "empty") return;
+
+    if (tile.isStationDraw || TILE_DEFS[tile.type].isStation) {
+      ctx.fillStyle = "#d8cfa8";
+      ctx.fillRect(ox + 4, oy + 4, TILE - 8, 10);
+      ctx.fillStyle = "#8b1e2b";
+      ctx.font = "bold 9px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("駅", ox + TILE / 2, oy + 12);
+    }
+
+    var edges = getConnections(tile);
+    for (var i = 0; i < edges.length; i++) {
+      drawTrack(edgePath(row, col, edges[i][0], edges[i][1]), TILE_DEFS[tile.type].double === true);
+    }
+    drawSignal(row, col);
+  }
+
+  function drawGrid() {
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) drawTile(r, c);
+    }
+  }
+
+  // ---------- お絵かきモード: 経路計算 ----------
+  function computeCum(points) {
+    var cum = [0];
+    for (var i = 1; i < points.length; i++) {
+      var dx = points[i].x - points[i - 1].x, dy = points[i].y - points[i - 1].y;
+      cum.push(cum[i - 1] + Math.sqrt(dx * dx + dy * dy));
+    }
+    return cum;
+  }
+
+  function pathPointAt(path, dist) {
+    var total = path.cum[path.cum.length - 1];
+    if (total <= 0) {
+      var only = path.points[0];
+      return { x: only.x, y: only.y, tx: 1, ty: 0 };
+    }
+    if (path.closed) {
+      dist = ((dist % total) + total) % total;
+    } else {
+      if (dist < 0) dist = 0;
+      if (dist > total) dist = total;
+    }
+    for (var i = 1; i < path.cum.length; i++) {
+      if (dist <= path.cum[i] || i === path.cum.length - 1) {
+        var segLen = path.cum[i] - path.cum[i - 1];
+        var t = segLen > 0 ? (dist - path.cum[i - 1]) / segLen : 0;
+        var p0 = path.points[i - 1], p1 = path.points[i];
+        return {
+          x: p0.x + (p1.x - p0.x) * t,
+          y: p0.y + (p1.y - p0.y) * t,
+          tx: p1.x - p0.x, ty: p1.y - p0.y
+        };
+      }
+    }
+    var last = path.points[path.points.length - 1];
+    return { x: last.x, y: last.y, tx: 1, ty: 0 };
+  }
+
+  function nearestPointOnPath(path, px, py) {
+    var best = null;
+    for (var i = 1; i < path.points.length; i++) {
+      var p0 = path.points[i - 1], p1 = path.points[i];
+      var dx = p1.x - p0.x, dy = p1.y - p0.y;
+      var len2 = dx * dx + dy * dy;
+      var t = len2 > 0 ? ((px - p0.x) * dx + (py - p0.y) * dy) / len2 : 0;
+      if (t < 0) t = 0; if (t > 1) t = 1;
+      var qx = p0.x + dx * t, qy = p0.y + dy * t;
+      var dist2 = (px - qx) * (px - qx) + (py - qy) * (py - qy);
+      var d = path.cum[i - 1] + Math.sqrt(len2) * t;
+      if (!best || dist2 < best.dist2) best = { dist2: dist2, arcDist: d };
+    }
+    return best;
+  }
+
+  function findNearestPath(px, py, maxDist) {
+    var best = null;
+    freePaths.forEach(function (path) {
+      var r = nearestPointOnPath(path, px, py);
+      if (r && (!best || r.dist2 < best.dist2)) best = { path: path, dist2: r.dist2, arcDist: r.arcDist };
+    });
+    if (best && Math.sqrt(best.dist2) <= maxDist) return best;
+    return null;
+  }
+
+  function drawPolylineTrack(points, cum) {
+    var total = cum[cum.length - 1];
+    if (total <= 0) return;
+    var stepPx = 10;
+    var steps = Math.max(2, Math.round(total / stepPx));
+    var samples = [];
+    var fakePath = { points: points, cum: cum, closed: false };
+    for (var i = 0; i <= steps; i++) {
+      var d = (total * i) / steps;
+      var pt = pathPointAt(fakePath, d);
+      var len = Math.sqrt(pt.tx * pt.tx + pt.ty * pt.ty) || 1;
+      samples.push({ x: pt.x, y: pt.y, nx: -pt.ty / len, ny: pt.tx / len });
+    }
+    for (var i2 = 0; i2 <= steps; i2 += 3) {
+      var s = samples[i2];
+      ctx.strokeStyle = "#7a5a3a";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(s.x - s.nx * 8, s.y - s.ny * 8);
+      ctx.lineTo(s.x + s.nx * 8, s.y + s.ny * 8);
+      ctx.stroke();
+    }
+    var prevA = null, prevB = null;
+    for (var i3 = 0; i3 <= steps; i3++) {
+      var s2 = samples[i3];
+      var railA = { x: s2.x - s2.nx * 4.5, y: s2.y - s2.ny * 4.5 };
+      var railB = { x: s2.x + s2.nx * 4.5, y: s2.y + s2.ny * 4.5 };
+      if (prevA) {
+        ctx.strokeStyle = "#5a5a5a";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(prevA.x, prevA.y); ctx.lineTo(railA.x, railA.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(prevB.x, prevB.y); ctx.lineTo(railB.x, railB.y); ctx.stroke();
+      }
+      prevA = railA; prevB = railB;
+    }
+  }
+
+  function drawFreeMode() {
+    ctx.fillStyle = "#e9e0c4";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    freePaths.forEach(function (path) { drawPolylineTrack(path.points, path.cum); });
+    if (drawingPoints && drawingPoints.length > 1) {
+      ctx.strokeStyle = "rgba(139,30,43,0.5)";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(drawingPoints[0].x, drawingPoints[0].y);
+      for (var i = 1; i < drawingPoints.length; i++) ctx.lineTo(drawingPoints[i].x, drawingPoints[i].y);
+      ctx.stroke();
+    }
+  }
+
+  function updateFreeTrain(t, dt) {
+    var path = freePaths.filter(function (p) { return p.id === t.pathId; })[0];
+    if (!path) return;
+    var total = path.cum[path.cum.length - 1];
+    var speedPx = dt * 70;
+    t.dist += speedPx * t.dir;
+    if (path.closed) {
+      var wrapped = ((t.dist % total) + total) % total;
+      t.dist = wrapped;
+    } else {
+      if (t.dist >= total) { t.dist = total; t.dir = -1; }
+      else if (t.dist <= 0) { t.dist = 0; t.dir = 1; }
+    }
+  }
+
+  function drawFreeTrain(t) {
+    var path = freePaths.filter(function (p) { return p.id === t.pathId; })[0];
+    if (!path) return;
+    var pt = pathPointAt(path, t.dist);
+    var angle = Math.atan2(pt.ty, pt.tx);
+    if (t.dir === -1) angle += Math.PI;
+    var series = seriesById(t.series);
+    ctx.save();
+    ctx.translate(pt.x, pt.y);
+    ctx.rotate(angle);
+    var w = TILE * 0.86, h = TILE * 0.42;
+    ctx.fillStyle = series.body;
+    roundRect(-w / 2, -h / 2, w, h, 6);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.25)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = series.stripe;
+    ctx.fillRect(-w / 2, -h * 0.12, w, h * 0.24);
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.fillRect(-w / 2 + 4, -h / 2 + 3, w * 0.28, h * 0.32);
+    ctx.fillRect(-w / 2 + w * 0.4, -h / 2 + 3, w * 0.28, h * 0.32);
+    ctx.restore();
+  }
+
+  // ---------- 電車 ----------
+  function seriesById(id) {
+    for (var i = 0; i < TRAIN_SERIES.length; i++) {
+      if (TRAIN_SERIES[i].id === id) return TRAIN_SERIES[i];
+    }
+    return TRAIN_SERIES[0];
+  }
+
+  function findAnyTrackCell() {
+    var candidates = [];
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        if (grid[r][c].type !== "empty") candidates.push({ row: r, col: c });
+      }
+    }
+    if (candidates.length === 0) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  function spawnTrain(seriesId, forcedCell) {
+    if (trains.length >= 24) return;
+    var cell = forcedCell || findAnyTrackCell();
+    if (!cell) { setStatus("先に線路を配置してください。"); return; }
+    var edges = getConnections(grid[cell.row][cell.col]);
+    if (edges.length === 0) return;
+    var edge = edges[0];
+    trains.push({
+      id: trainSeq++,
+      series: seriesId,
+      row: cell.row,
+      col: cell.col,
+      entrySide: edge[0],
+      heading: edge[1],
+      progress: forcedCell ? 0 : Math.random(),
+      dwelling: false,
+      dwellTimer: 0
+    });
+    renderTrainList();
+    saveState();
+  }
+
+  function removeTrain(id) {
+    trains = trains.filter(function (t) { return t.id !== id; });
+    freeTrains = freeTrains.filter(function (t) { return t.id !== id; });
+    renderTrainList();
+    saveState();
+  }
+
+  function nextHeading(tile, entrySide, prevHeading) {
+    var edges = getConnections(tile);
+    var candidates = [];
+    for (var i = 0; i < edges.length; i++) {
+      var e = edges[i];
+      if (e[0] === entrySide) candidates.push(e[1]);
+      else if (e[1] === entrySide) candidates.push(e[0]);
+    }
+    if (candidates.length === 0) return null;
+    if (candidates.length === 1) return candidates[0];
+    if (candidates.indexOf(prevHeading) !== -1) return prevHeading;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  function updateTrain(t, dt) {
+    if (t.dwelling) {
+      t.dwellTimer -= dt;
+      if (t.dwellTimer <= 0) t.dwelling = false;
+      return;
+    }
+    t.progress += dt * 0.9;
+    if (t.progress < 1) return;
+
+    var next = neighborCell(t.row, t.col, t.heading);
+    if (!inBounds(next.row, next.col) || grid[next.row][next.col].type === "empty") {
+      // 行き止まり: 同じタイルの辺を逆向きに戻る(entrySideとheadingを入れ替え)
+      var swapA = t.entrySide;
+      t.entrySide = t.heading;
+      t.heading = swapA;
+      t.progress = 0;
+      return;
+    }
+    var sigState = getSignalState(next.row + "," + next.col);
+    if (sigState === "red") {
+      t.progress = 0.999; // 信号待ち
+      return;
+    }
+    var entrySide = opposite(t.heading);
+    var nh = nextHeading(grid[next.row][next.col], entrySide, t.heading);
+    if (nh === null) {
+      var swapB = t.entrySide;
+      t.entrySide = t.heading;
+      t.heading = swapB;
+      t.progress = 0;
+      return;
+    }
+    t.row = next.row;
+    t.col = next.col;
+    t.entrySide = entrySide;
+    t.heading = nh;
+    t.progress = 0;
+    if (TILE_DEFS[grid[t.row][t.col].type].isStation) {
+      t.dwelling = true;
+      t.dwellTimer = 1.4;
+    }
+  }
+
+  function drawTrain(t) {
+    var tile = grid[t.row][t.col];
+    var edges = getConnections(tile);
+    var matched = null;
+    for (var i = 0; i < edges.length; i++) {
+      var e = edges[i];
+      if ((e[0] === t.entrySide && e[1] === t.heading) || (e[1] === t.entrySide && e[0] === t.heading)) {
+        matched = e; break;
+      }
+    }
+    var path;
+    if (matched) path = edgePath(t.row, t.col, t.entrySide, t.heading);
+    else {
+      var ox = t.col * TILE, oy = t.row * TILE;
+      path = { p0: { x: ox + TILE / 2, y: oy + TILE / 2 }, p1: { x: ox + TILE / 2, y: oy + TILE / 2 }, ctrl: null };
+    }
+    var p = pointOnPath(path, t.progress);
+    var tan = tangentOnPath(path, t.progress);
+    var len = Math.sqrt(tan.x * tan.x + tan.y * tan.y) || 1;
+    var nx = -tan.y / len, ny = tan.x / len;
+    var angle = Math.atan2(tan.y, tan.x);
+
+    if (matched && TILE_DEFS[tile.type].double) {
+      var laneShift = (t.heading === matched[1]) ? 7 : -7;
+      p = { x: p.x + nx * laneShift, y: p.y + ny * laneShift };
+    }
+
+    var series = seriesById(t.series);
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(angle);
+
+    var w = TILE * 0.86, h = TILE * 0.42;
+    ctx.fillStyle = series.body;
+    roundRect(-w / 2, -h / 2, w, h, 6);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.25)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = series.stripe;
+    ctx.fillRect(-w / 2, -h * 0.12, w, h * 0.24);
+
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.fillRect(-w / 2 + 4, -h / 2 + 3, w * 0.28, h * 0.32);
+    ctx.fillRect(-w / 2 + w * 0.4, -h / 2 + 3, w * 0.28, h * 0.32);
+
+    ctx.restore();
+  }
+
+  function roundRect(x, y, w, h, rad) {
+    ctx.beginPath();
+    ctx.moveTo(x + rad, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rad);
+    ctx.arcTo(x + w, y + h, x, y + h, rad);
+    ctx.arcTo(x, y + h, x, y, rad);
+    ctx.arcTo(x, y, x + w, y, rad);
+    ctx.closePath();
+  }
+
+  // ---------- ループ ----------
+  var lastTime = null;
+  function loop(ts) {
+    if (lastTime === null) lastTime = ts;
+    var dt = Math.min((ts - lastTime) / 1000, 0.1);
+    lastTime = ts;
+
+    var factor = speed * 0.9;
+    if (playing) totalTime += dt;
+
+    if (mode === "tile") {
+      if (playing) {
+        for (var i = 0; i < trains.length; i++) updateTrain(trains[i], dt * factor);
+      }
+      drawGrid();
+      for (var j = 0; j < trains.length; j++) drawTrain(trains[j]);
+    } else {
+      if (playing) {
+        for (var k = 0; k < freeTrains.length; k++) updateFreeTrain(freeTrains[k], dt * factor);
+      }
+      drawFreeMode();
+      for (var m = 0; m < freeTrains.length; m++) drawFreeTrain(freeTrains[m]);
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- 入力 ----------
+  function cellFromEvent(evt) {
+    var rect = canvas.getBoundingClientRect();
+    var clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    var clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+    var x = (clientX - rect.left) * (canvas.width / rect.width);
+    var y = (clientY - rect.top) * (canvas.height / rect.height);
+    return { row: Math.floor(y / TILE), col: Math.floor(x / TILE) };
+  }
+
+  function neighborConnectsBack(row, col, dir) {
+    var nb = neighborCell(row, col, dir);
+    if (!inBounds(nb.row, nb.col)) return false;
+    var nbTile = grid[nb.row][nb.col];
+    if (nbTile.type === "empty") return false;
+    var back = opposite(dir);
+    var edges = getConnections(nbTile);
+    for (var i = 0; i < edges.length; i++) {
+      if (edges[i][0] === back || edges[i][1] === back) return true;
+    }
+    return false;
+  }
+
+  function bestAutoRotation(type, row, col) {
+    var def = TILE_DEFS[type];
+    if (!def || def.edges.length === 0) return 0;
+    var bestRot = 0, bestScore = -1;
+    for (var rot = 0; rot < 4; rot++) {
+      var dirsUsed = {};
+      def.edges.forEach(function (e) {
+        dirsUsed[(e[0] + rot) % 4] = true;
+        dirsUsed[(e[1] + rot) % 4] = true;
+      });
+      var score = 0;
+      Object.keys(dirsUsed).forEach(function (dStr) {
+        if (neighborConnectsBack(row, col, parseInt(dStr, 10))) score++;
+      });
+      if (score > bestScore) { bestScore = score; bestRot = rot; }
+    }
+    return bestRot;
+  }
+
+  function pointFromEvent(evt) {
+    var rect = canvas.getBoundingClientRect();
+    var clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    var clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+    var x = (clientX - rect.left) * (canvas.width / rect.width);
+    var y = (clientY - rect.top) * (canvas.height / rect.height);
+    return { x: x, y: y };
+  }
+
+  function handleTileTap(evt) {
+    evt.preventDefault();
+    var cell = cellFromEvent(evt);
+    if (!inBounds(cell.row, cell.col)) return;
+    var tile = grid[cell.row][cell.col];
+    var key = cell.row + "," + cell.col;
+
+    if (placingTrainSeries) {
+      if (tile.type !== "empty") {
+        spawnTrain(placingTrainSeries, { row: cell.row, col: cell.col });
+        placingTrainSeries = null;
+        document.getElementById("addTrainBtn").textContent = "＋ 配置モード開始";
+        setStatus("");
+      } else {
+        setStatus("線路がある場所をタップしてください");
+      }
+      return;
+    }
+
+    if (selectedTool === "eraser") {
+      grid[cell.row][cell.col] = { type: "empty", rot: 0 };
+      delete signals[key];
+      saveState();
+      return;
+    }
+
+    if (selectedTool === "signal") {
+      if (tile.type === "empty") { setStatus("線路の上に信号機を置いてください"); return; }
+      if (!signals[key]) signals[key] = { state: "green", phase: Math.random() * 6 };
+      else if (signals[key].state === "green") signals[key].state = "red";
+      else delete signals[key];
+      saveState();
+      return;
+    }
+
+    if (tile.type === selectedTool) {
+      tile.rot = (tile.rot + 1) % 4;
+    } else {
+      grid[cell.row][cell.col] = { type: selectedTool, rot: bestAutoRotation(selectedTool, cell.row, cell.col) };
+    }
+    saveState();
+  }
+
+  function spawnFreeTrain(seriesId, pathId, dist) {
+    if (freeTrains.length >= 24) return;
+    freeTrains.push({ id: trainSeq++, series: seriesId, pathId: pathId, dist: dist, dir: 1 });
+    renderTrainList();
+    saveState();
+  }
+
+  function finalizeDrawing() {
+    if (!drawingPoints || drawingPoints.length < 2) { drawingPoints = null; return; }
+    var pts = drawingPoints.slice();
+    var first = pts[0], last = pts[pts.length - 1];
+    var dx = last.x - first.x, dy = last.y - first.y;
+    var closed = false;
+    if (Math.sqrt(dx * dx + dy * dy) < 28 && pts.length > 4) {
+      pts[pts.length - 1] = { x: first.x, y: first.y };
+      closed = true;
+    }
+    var path = { id: freePathSeq++, points: pts, closed: closed };
+    path.cum = computeCum(path.points);
+    if (path.cum[path.cum.length - 1] < 20) { drawingPoints = null; return; }
+    freePaths.push(path);
+    drawingPoints = null;
+    saveState();
+  }
+
+  function onPointerDown(evt) {
+    if (mode === "tile") { handleTileTap(evt); return; }
+    evt.preventDefault();
+    var p = pointFromEvent(evt);
+
+    if (placingTrainSeries) {
+      var found = findNearestPath(p.x, p.y, 30);
+      if (found) {
+        spawnFreeTrain(placingTrainSeries, found.path.id, found.arcDist);
+        placingTrainSeries = null;
+        document.getElementById("addTrainBtn").textContent = "＋ 配置モード開始";
+        setStatus("");
+      } else {
+        setStatus("線の上をタップしてください");
+      }
+      return;
+    }
+
+    if (selectedFreeTool === "eraser") {
+      var found2 = findNearestPath(p.x, p.y, 20);
+      if (found2) {
+        freePaths = freePaths.filter(function (pp) { return pp.id !== found2.path.id; });
+        freeTrains = freeTrains.filter(function (t) { return t.pathId !== found2.path.id; });
+        renderTrainList();
+        saveState();
+      }
+      return;
+    }
+
+    drawingPoints = [p];
+    try { canvas.setPointerCapture(evt.pointerId); } catch (e) { /* ignore */ }
+  }
+
+  function onPointerMove(evt) {
+    if (mode !== "free" || !drawingPoints) return;
+    evt.preventDefault();
+    var p = pointFromEvent(evt);
+    var last = drawingPoints[drawingPoints.length - 1];
+    var dx = p.x - last.x, dy = p.y - last.y;
+    if (dx * dx + dy * dy > 25) drawingPoints.push(p);
+  }
+
+  function onPointerUp(evt) {
+    if (mode !== "free" || !drawingPoints) return;
+    evt.preventDefault();
+    finalizeDrawing();
+  }
+
+  canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerUp);
+
+  // ---------- UIの構築 ----------
+  function buildToolIcon(canvasEl, type) {
+    var c = canvasEl.getContext("2d");
+    var size = 40;
+    canvasEl.width = size; canvasEl.height = size;
+    var savedGrid = grid, savedCtx = ctx;
+    // ミニ描画用に一時的にctx差し替え
+    ctx = c;
+    var fakeTile = { type: type, rot: 0 };
+    c.fillStyle = "#e9e0c4";
+    c.fillRect(0, 0, size, size);
+    if (type !== "eraser" && type !== "signal") {
+      if (TILE_DEFS[type].isStation) {
+        c.fillStyle = "#d8cfa8";
+        c.fillRect(3, 3, size - 6, 8);
+      }
+      var edges = TILE_DEFS[type].edges;
+      var isDouble = TILE_DEFS[type].double === true;
+      for (var i = 0; i < edges.length; i++) {
+        var a = edges[i][0], b = edges[i][1];
+        var p0 = sideMidpointRaw(a, size), p1 = sideMidpointRaw(b, size);
+        var ctrl = cornerForRaw(a, b, size);
+        var offsets = isDouble ? [-4, 4] : [0];
+        offsets.forEach(function (off) {
+          c.strokeStyle = "#5a5a5a";
+          c.lineWidth = 2.5;
+          c.beginPath();
+          if (ctrl) {
+            c.moveTo(p0.x, p0.y + off);
+            c.quadraticCurveTo(ctrl.x + off, ctrl.y + off, p1.x + off, p1.y);
+          } else {
+            c.moveTo(p0.x + (a === W || a === E ? 0 : off), p0.y + (a === N || a === S ? 0 : off));
+            c.lineTo(p1.x + (b === W || b === E ? 0 : off), p1.y + (b === N || b === S ? 0 : off));
+          }
+          c.stroke();
+        });
+      }
+    } else if (type === "signal") {
+      c.strokeStyle = "#4a3b2a";
+      c.lineWidth = 2;
+      c.beginPath(); c.moveTo(size / 2, size - 8); c.lineTo(size / 2, 14); c.stroke();
+      c.beginPath();
+      c.arc(size / 2, 10, 7, 0, Math.PI * 2);
+      c.fillStyle = "#3fa858";
+      c.fill();
+      c.strokeStyle = "#2a2a2a";
+      c.stroke();
+    } else {
+      c.strokeStyle = "#8b1e2b";
+      c.lineWidth = 3;
+      c.beginPath(); c.moveTo(8, 8); c.lineTo(size - 8, size - 8); c.stroke();
+      c.beginPath(); c.moveTo(size - 8, 8); c.lineTo(8, size - 8); c.stroke();
+    }
+    ctx = savedCtx;
+  }
+
+  function sideMidpointRaw(dir, size) {
+    if (dir === N) return { x: size / 2, y: 0 };
+    if (dir === E) return { x: size, y: size / 2 };
+    if (dir === S) return { x: size / 2, y: size };
+    return { x: 0, y: size / 2 };
+  }
+  function cornerForRaw(a, b, size) {
+    var lo = Math.min(a, b), hi = Math.max(a, b);
+    if (lo === N && hi === E) return { x: size, y: 0 };
+    if (lo === E && hi === S) return { x: size, y: size };
+    if (lo === S && hi === W) return { x: 0, y: size };
+    if (lo === N && hi === W) return { x: 0, y: 0 };
+    return null;
+  }
+
+  function renderToolRow() {
+    var row = document.getElementById("toolRow");
+    row.innerHTML = "";
+    TOOL_ORDER.forEach(function (type) {
+      var btn = document.createElement("div");
+      btn.className = "tool-btn" + (type === selectedTool ? " active" : "");
+      var c = document.createElement("canvas");
+      buildToolIcon(c, type);
+      var label = document.createElement("div");
+      label.textContent = TOOL_LABEL[type];
+      btn.appendChild(c);
+      btn.appendChild(label);
+      btn.addEventListener("click", function (t) {
+        return function () { selectedTool = t; renderToolRow(); };
+      }(type));
+      row.appendChild(btn);
+    });
+  }
+
+  function renderTrainTypeRow() {
+    var row = document.getElementById("trainTypeRow");
+    row.innerHTML = "";
+    TRAIN_SERIES.forEach(function (s) {
+      var btn = document.createElement("div");
+      btn.className = "train-btn" + (s.id === selectedSeries ? " active" : "");
+      btn.style.background = s.body;
+      btn.style.color = (s.id === "5000" || s.id === "7000" || s.id === "8000" || s.id === "9000") ? "#5a3d1e" : "#fff";
+      btn.style.textShadow = "none";
+      btn.style.borderColor = s.stripe;
+      btn.textContent = s.name;
+      btn.addEventListener("click", function (id) {
+        return function () { selectedSeries = id; renderTrainTypeRow(); };
+      }(s.id));
+      row.appendChild(btn);
+    });
+  }
+
+  function renderTrainList() {
+    var list = document.getElementById("trainList");
+    list.innerHTML = "";
+    var current = mode === "tile" ? trains : freeTrains;
+    current.forEach(function (t) {
+      var s = seriesById(t.series);
+      var chip = document.createElement("div");
+      chip.className = "train-chip";
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = s.stripe;
+      var label = document.createElement("span");
+      label.textContent = s.name;
+      var closeBtn = document.createElement("button");
+      closeBtn.textContent = "×";
+      closeBtn.addEventListener("click", function (id) {
+        return function () { removeTrain(id); };
+      }(t.id));
+      chip.appendChild(dot);
+      chip.appendChild(label);
+      chip.appendChild(closeBtn);
+      list.appendChild(chip);
+    });
+  }
+
+  // ---------- 保存/読込 ----------
+  var STORAGE_KEY = "keio_line_sim_v3";
+  function saveState() {
+    try {
+      var data = {
+        mode: mode,
+        grid: grid,
+        signals: signals,
+        signalAutoMode: signalAutoMode,
+        trains: trains.map(function (t) {
+          return { series: t.series, row: t.row, col: t.col, entrySide: t.entrySide, heading: t.heading };
+        }),
+        freePaths: freePaths.map(function (p) {
+          return { id: p.id, points: p.points, closed: p.closed };
+        }),
+        freeTrains: freeTrains.map(function (t) {
+          return { series: t.series, pathId: t.pathId, dist: t.dist, dir: t.dir };
+        })
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) { /* ignore */ }
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      if (data.mode === "tile" || data.mode === "free") mode = data.mode;
+      if (data.grid && data.grid.length === ROWS) grid = data.grid;
+      if (data.signals) signals = data.signals;
+      if (typeof data.signalAutoMode === "boolean") signalAutoMode = data.signalAutoMode;
+      if (data.trains) {
+        trains = data.trains.map(function (t) {
+          return {
+            id: trainSeq++, series: t.series, row: t.row, col: t.col,
+            entrySide: t.entrySide, heading: t.heading, progress: 0.2,
+            dwelling: false, dwellTimer: 0
+          };
+        });
+      }
+      if (data.freePaths) {
+        freePaths = data.freePaths.map(function (p) {
+          var path = { id: p.id, points: p.points, closed: p.closed };
+          path.cum = computeCum(path.points);
+          freePathSeq = Math.max(freePathSeq, p.id + 1);
+          return path;
+        });
+      }
+      if (data.freeTrains) {
+        freeTrains = data.freeTrains.map(function (t) {
+          return { id: trainSeq++, series: t.series, pathId: t.pathId, dist: t.dist, dir: t.dir };
+        });
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+
+  // ---------- ボタン類 ----------
+  document.getElementById("addTrainBtn").addEventListener("click", function (e) {
+    if (placingTrainSeries) {
+      placingTrainSeries = null;
+      e.target.textContent = "＋ 配置モード開始";
+      setStatus("");
+      return;
+    }
+    placingTrainSeries = selectedSeries;
+    e.target.textContent = "✕ 配置モードを解除";
+    var place = mode === "tile" ? "線路をタップして" : "線の上をタップして";
+    setStatus(place + " " + seriesById(selectedSeries).name + " を配置します");
+  });
+  document.getElementById("clearTrainsBtn").addEventListener("click", function () {
+    var current = mode === "tile" ? trains : freeTrains;
+    if (current.length === 0) return;
+    if (confirm("すべての電車を削除しますか？")) {
+      if (mode === "tile") trains = []; else freeTrains = [];
+      renderTrainList();
+      saveState();
+    }
+  });
+  document.getElementById("playPauseBtn").addEventListener("click", function (e) {
+    playing = !playing;
+    e.target.textContent = playing ? "⏸ 一時停止" : "▶ 再生";
+  });
+  document.getElementById("signalModeBtn").addEventListener("click", function (e) {
+    signalAutoMode = !signalAutoMode;
+    e.target.textContent = signalAutoMode ? "信号:自動" : "信号:手動";
+    saveState();
+  });
+  document.getElementById("resetBtn").addEventListener("click", function () {
+    if (!confirm("線路・お絵かきの線・電車をすべて消去します。よろしいですか？")) return;
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) grid[r][c] = { type: "empty", rot: 0 };
+    trains = [];
+    signals = {};
+    freePaths = [];
+    freeTrains = [];
+    renderTrainList();
+    saveState();
+  });
+  document.getElementById("speedSlider").addEventListener("input", function (e) {
+    speed = parseInt(e.target.value, 10);
+  });
+
+  function renderFreeToolRow() {
+    var row = document.getElementById("freeToolRow");
+    row.innerHTML = "";
+    var items = [["draw", "✏️", "描く"], ["eraser", "🧹", "線を消す"]];
+    items.forEach(function (item) {
+      var btn = document.createElement("div");
+      btn.className = "tool-btn" + (selectedFreeTool === item[0] ? " active" : "");
+      var icon = document.createElement("div");
+      icon.style.fontSize = "20px";
+      icon.textContent = item[1];
+      var label = document.createElement("div");
+      label.textContent = item[2];
+      btn.appendChild(icon);
+      btn.appendChild(label);
+      btn.addEventListener("click", function (t) {
+        return function () { selectedFreeTool = t; renderFreeToolRow(); };
+      }(item[0]));
+      row.appendChild(btn);
+    });
+  }
+
+  function setMode(m) {
+    mode = m;
+    document.getElementById("tilePanel").style.display = (m === "tile") ? "" : "none";
+    document.getElementById("freePanel").style.display = (m === "free") ? "" : "none";
+    document.getElementById("modeTileBtn").className = "icon-btn" + (m === "tile" ? "" : " secondary");
+    document.getElementById("modeFreeBtn").className = "icon-btn" + (m === "free" ? "" : " secondary");
+    canvas.style.touchAction = (m === "free") ? "none" : "manipulation";
+    placingTrainSeries = null;
+    drawingPoints = null;
+    document.getElementById("addTrainBtn").textContent = "＋ 配置モード開始";
+    setStatus("");
+    renderTrainList();
+    saveState();
+  }
+
+  document.getElementById("modeTileBtn").addEventListener("click", function () { setMode("tile"); });
+  document.getElementById("modeFreeBtn").addEventListener("click", function () { setMode("free"); });
+
+
+
+  function generateOvalCourse() {
+    if (!confirm("楕円コースを自動生成します。現在の線路・電車・信号機はすべて消えます。よろしいですか？")) return;
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) grid[r][c] = { type: "empty", rot: 0 };
+    trains = [];
+    signals = {};
+
+    var top = 1, bottom = ROWS - 2, left = 1, right = COLS - 2;
+    grid[top][left] = { type: "curve", rot: 1 };     // 左上: 下と右へ
+    grid[top][right] = { type: "curve", rot: 2 };    // 右上: 下と左へ
+    grid[bottom][left] = { type: "curve", rot: 0 };  // 左下: 上と右へ
+    grid[bottom][right] = { type: "curve", rot: 3 }; // 右下: 上と左へ
+
+    for (var c1 = left + 1; c1 < right; c1++) {
+      grid[top][c1] = { type: "straight", rot: 1 };
+      grid[bottom][c1] = { type: "straight", rot: 1 };
+    }
+    for (var r1 = top + 1; r1 < bottom; r1++) {
+      grid[r1][left] = { type: "straight", rot: 0 };
+      grid[r1][right] = { type: "straight", rot: 0 };
+    }
+
+    spawnTrain("5000", { row: top, col: left + 1 });
+    spawnTrain("6000", { row: bottom, col: right - 1 });
+    renderTrainList();
+    saveState();
+  }
+
+  document.getElementById("ovalBtn").addEventListener("click", generateOvalCourse);
+
+  // ---------- 初期化 ----------
+  loadState();
+  document.getElementById("signalModeBtn").textContent = signalAutoMode ? "信号:自動" : "信号:手動";
+  renderToolRow();
+  renderFreeToolRow();
+  renderTrainTypeRow();
+  renderTrainList();
+  setMode(mode);
+  if (trains.length === 0 && freePaths.length === 0) {
+    // 初回は簡単なループ線路をサンプルとして設置
+    var sample = [
+      [1,1,"curve",1],[1,2,"straight",0],[1,3,"straight",0],[1,4,"curve",2],
+      [2,4,"dstraight",1],[3,4,"curve",1],[3,3,"station",1],[3,2,"straight",0],
+      [3,1,"curve",0],[2,1,"straight",1]
+    ];
+    sample.forEach(function (s) { grid[s[0]][s[1]] = { type: s[2], rot: s[3] }; });
+    signals["1,3"] = { state: "green", phase: 0 };
+    spawnTrain("5000", { row: 2, col: 4 });
+    spawnTrain("6000");
+  }
+  requestAnimationFrame(loop);
+})();
 </script>
-
 </body>
 </html>
