@@ -125,6 +125,9 @@
     <p class="panel-title">線路パーツ</p>
     <div class="btn-row" id="toolRow"></div>
     <p class="hint">空マスをタップすると周囲の線路に自動で繋がる向きで設置されます／同じ種類を再タップで90°回転／複線は上下線を自動ですれ違わせます／信号機は線路の上に置いてタップで 緑→赤→なし を切替／消しゴムでタップして削除</p>
+    <div style="margin-top:8px;">
+      <button class="icon-btn secondary" id="ovalBtn" style="width:100%;">🥚 楕円コースを自動生成（現在の線路は消えます）</button>
+    </div>
   </div>
 
   <div class="panel">
@@ -873,6 +876,35 @@
   document.getElementById("speedSlider").addEventListener("input", function (e) {
     speed = parseInt(e.target.value, 10);
   });
+
+  function generateOvalCourse() {
+    if (!confirm("楕円コースを自動生成します。現在の線路・電車・信号機はすべて消えます。よろしいですか？")) return;
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) grid[r][c] = { type: "empty", rot: 0 };
+    trains = [];
+    signals = {};
+
+    var top = 1, bottom = ROWS - 2, left = 1, right = COLS - 2;
+    grid[top][left] = { type: "curve", rot: 1 };     // 左上: 下と右へ
+    grid[top][right] = { type: "curve", rot: 2 };    // 右上: 下と左へ
+    grid[bottom][left] = { type: "curve", rot: 0 };  // 左下: 上と右へ
+    grid[bottom][right] = { type: "curve", rot: 3 }; // 右下: 上と左へ
+
+    for (var c1 = left + 1; c1 < right; c1++) {
+      grid[top][c1] = { type: "straight", rot: 1 };
+      grid[bottom][c1] = { type: "straight", rot: 1 };
+    }
+    for (var r1 = top + 1; r1 < bottom; r1++) {
+      grid[r1][left] = { type: "straight", rot: 0 };
+      grid[r1][right] = { type: "straight", rot: 0 };
+    }
+
+    spawnTrain("5000", { row: top, col: left + 1 });
+    spawnTrain("6000", { row: bottom, col: right - 1 });
+    renderTrainList();
+    saveState();
+  }
+
+  document.getElementById("ovalBtn").addEventListener("click", generateOvalCourse);
 
   // ---------- 初期化 ----------
   loadState();
