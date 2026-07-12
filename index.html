@@ -471,9 +471,10 @@
 
     var next = neighborCell(t.row, t.col, t.heading);
     if (!inBounds(next.row, next.col) || grid[next.row][next.col].type === "empty") {
-      // 行き止まり: Uターン
-      t.heading = opposite(t.heading);
-      t.entrySide = opposite(t.entrySide);
+      // 行き止まり: 同じタイルの辺を逆向きに戻る(entrySideとheadingを入れ替え)
+      var swapA = t.entrySide;
+      t.entrySide = t.heading;
+      t.heading = swapA;
       t.progress = 0;
       return;
     }
@@ -485,8 +486,9 @@
     var entrySide = opposite(t.heading);
     var nh = nextHeading(grid[next.row][next.col], entrySide, t.heading);
     if (nh === null) {
-      t.heading = opposite(t.heading);
-      t.entrySide = opposite(t.entrySide);
+      var swapB = t.entrySide;
+      t.entrySide = t.heading;
+      t.heading = swapB;
       t.progress = 0;
       return;
     }
