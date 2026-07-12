@@ -124,7 +124,7 @@
   <div class="panel">
     <p class="panel-title">線路パーツ</p>
     <div class="btn-row" id="toolRow"></div>
-    <p class="hint">空マスをタップで設置／同じ種類を再タップで90°回転／複線は上下線を自動ですれ違わせます／信号機は線路の上に置いてタップで 緑→赤→なし を切替／消しゴムでタップして削除</p>
+    <p class="hint">空マスをタップすると周囲の線路に自動で繋がる向きで設置されます／同じ種類を再タップで90°回転／複線は上下線を自動ですれ違わせます／信号機は線路の上に置いてタップで 緑→赤→なし を切替／消しゴムでタップして削除</p>
   </div>
 
   <div class="panel">
@@ -590,6 +590,38 @@
     return { row: Math.floor(y / TILE), col: Math.floor(x / TILE) };
   }
 
+  function neighborConnectsBack(row, col, dir) {
+    var nb = neighborCell(row, col, dir);
+    if (!inBounds(nb.row, nb.col)) return false;
+    var nbTile = grid[nb.row][nb.col];
+    if (nbTile.type === "empty") return false;
+    var back = opposite(dir);
+    var edges = getConnections(nbTile);
+    for (var i = 0; i < edges.length; i++) {
+      if (edges[i][0] === back || edges[i][1] === back) return true;
+    }
+    return false;
+  }
+
+  function bestAutoRotation(type, row, col) {
+    var def = TILE_DEFS[type];
+    if (!def || def.edges.length === 0) return 0;
+    var bestRot = 0, bestScore = -1;
+    for (var rot = 0; rot < 4; rot++) {
+      var dirsUsed = {};
+      def.edges.forEach(function (e) {
+        dirsUsed[(e[0] + rot) % 4] = true;
+        dirsUsed[(e[1] + rot) % 4] = true;
+      });
+      var score = 0;
+      Object.keys(dirsUsed).forEach(function (dStr) {
+        if (neighborConnectsBack(row, col, parseInt(dStr, 10))) score++;
+      });
+      if (score > bestScore) { bestScore = score; bestRot = rot; }
+    }
+    return bestRot;
+  }
+
   function handleTap(evt) {
     evt.preventDefault();
     var cell = cellFromEvent(evt);
@@ -628,7 +660,7 @@
     if (tile.type === selectedTool) {
       tile.rot = (tile.rot + 1) % 4;
     } else {
-      grid[cell.row][cell.col] = { type: selectedTool, rot: 0 };
+      grid[cell.row][cell.col] = { type: selectedTool, rot: bestAutoRotation(selectedTool, cell.row, cell.col) };
     }
     saveState();
   }
