@@ -122,12 +122,26 @@
   </header>
 
   <div class="panel">
+    <p class="panel-title">操作モード</p>
+    <div class="btn-row">
+      <button class="icon-btn" id="modeTileBtn" style="flex:1;">🧩 線路モード</button>
+      <button class="icon-btn secondary" id="modeFreeBtn" style="flex:1;">✏️ お絵かきモード</button>
+    </div>
+  </div>
+
+  <div class="panel" id="tilePanel">
     <p class="panel-title">線路パーツ</p>
     <div class="btn-row" id="toolRow"></div>
     <p class="hint">空マスをタップすると周囲の線路に自動で繋がる向きで設置されます／同じ種類を再タップで90°回転／複線は上下線を自動ですれ違わせます／信号機は線路の上に置いてタップで 緑→赤→なし を切替／消しゴムでタップして削除</p>
     <div style="margin-top:8px;">
       <button class="icon-btn secondary" id="ovalBtn" style="width:100%;">🥚 楕円コースを自動生成（現在の線路は消えます）</button>
     </div>
+  </div>
+
+  <div class="panel" id="freePanel" style="display:none;">
+    <p class="panel-title">線を描く</p>
+    <div class="btn-row" id="freeToolRow"></div>
+    <p class="hint">指でなぞって線を描くと、そこがそのままコースになります。始点と終点を近づけて描くと輪っかとして繋がり、離れたまま描くとその区間を往復します。</p>
   </div>
 
   <div class="panel">
@@ -212,6 +226,14 @@
   var signalAutoMode = false;
   var placingTrainSeries = null;
   var totalTime = 0;
+
+  // お絵かきモード用の状態
+  var mode = "tile"; // "tile" | "free"
+  var freePaths = [];      // { id, points:[{x,y}], cum:[...], closed:bool }
+  var freePathSeq = 1;
+  var freeTrains = [];     // { id, series, pathId, dist, dir }
+  var selectedFreeTool = "draw"; // "draw" | "eraser"
+  var drawingPoints = null; // 現在ドラッグ中の点列(未確定)
 
   var canvas = document.getElementById("board");
   var ctx = canvas.getContext("2d");
@@ -402,6 +424,161 @@
     }
   }
 
+  // ---------- お絵かきモード: 経路計算 ----------
+  function computeCum(points) {
+    var cum = [0];
+    for (var i = 1; i < points.length; i++) {
+      var dx = points[i].x - points[i - 1].x, dy = points[i].y - points[i - 1].y;
+      cum.push(cum[i - 1] + Math.sqrt(dx * dx + dy * dy));
+    }
+    return cum;
+  }
+
+  function pathPointAt(path, dist) {
+    var total = path.cum[path.cum.length - 1];
+    if (total <= 0) {
+      var only = path.points[0];
+      return { x: only.x, y: only.y, tx: 1, ty: 0 };
+    }
+    if (path.closed) {
+      dist = ((dist % total) + total) % total;
+    } else {
+      if (dist < 0) dist = 0;
+      if (dist > total) dist = total;
+    }
+    for (var i = 1; i < path.cum.length; i++) {
+      if (dist <= path.cum[i] || i === path.cum.length - 1) {
+        var segLen = path.cum[i] - path.cum[i - 1];
+        var t = segLen > 0 ? (dist - path.cum[i - 1]) / segLen : 0;
+        var p0 = path.points[i - 1], p1 = path.points[i];
+        return {
+          x: p0.x + (p1.x - p0.x) * t,
+          y: p0.y + (p1.y - p0.y) * t,
+          tx: p1.x - p0.x, ty: p1.y - p0.y
+        };
+      }
+    }
+    var last = path.points[path.points.length - 1];
+    return { x: last.x, y: last.y, tx: 1, ty: 0 };
+  }
+
+  function nearestPointOnPath(path, px, py) {
+    var best = null;
+    for (var i = 1; i < path.points.length; i++) {
+      var p0 = path.points[i - 1], p1 = path.points[i];
+      var dx = p1.x - p0.x, dy = p1.y - p0.y;
+      var len2 = dx * dx + dy * dy;
+      var t = len2 > 0 ? ((px - p0.x) * dx + (py - p0.y) * dy) / len2 : 0;
+      if (t < 0) t = 0; if (t > 1) t = 1;
+      var qx = p0.x + dx * t, qy = p0.y + dy * t;
+      var dist2 = (px - qx) * (px - qx) + (py - qy) * (py - qy);
+      var d = path.cum[i - 1] + Math.sqrt(len2) * t;
+      if (!best || dist2 < best.dist2) best = { dist2: dist2, arcDist: d };
+    }
+    return best;
+  }
+
+  function findNearestPath(px, py, maxDist) {
+    var best = null;
+    freePaths.forEach(function (path) {
+      var r = nearestPointOnPath(path, px, py);
+      if (r && (!best || r.dist2 < best.dist2)) best = { path: path, dist2: r.dist2, arcDist: r.arcDist };
+    });
+    if (best && Math.sqrt(best.dist2) <= maxDist) return best;
+    return null;
+  }
+
+  function drawPolylineTrack(points, cum) {
+    var total = cum[cum.length - 1];
+    if (total <= 0) return;
+    var stepPx = 10;
+    var steps = Math.max(2, Math.round(total / stepPx));
+    var samples = [];
+    var fakePath = { points: points, cum: cum, closed: false };
+    for (var i = 0; i <= steps; i++) {
+      var d = (total * i) / steps;
+      var pt = pathPointAt(fakePath, d);
+      var len = Math.sqrt(pt.tx * pt.tx + pt.ty * pt.ty) || 1;
+      samples.push({ x: pt.x, y: pt.y, nx: -pt.ty / len, ny: pt.tx / len });
+    }
+    for (var i2 = 0; i2 <= steps; i2 += 3) {
+      var s = samples[i2];
+      ctx.strokeStyle = "#7a5a3a";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(s.x - s.nx * 8, s.y - s.ny * 8);
+      ctx.lineTo(s.x + s.nx * 8, s.y + s.ny * 8);
+      ctx.stroke();
+    }
+    var prevA = null, prevB = null;
+    for (var i3 = 0; i3 <= steps; i3++) {
+      var s2 = samples[i3];
+      var railA = { x: s2.x - s2.nx * 4.5, y: s2.y - s2.ny * 4.5 };
+      var railB = { x: s2.x + s2.nx * 4.5, y: s2.y + s2.ny * 4.5 };
+      if (prevA) {
+        ctx.strokeStyle = "#5a5a5a";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(prevA.x, prevA.y); ctx.lineTo(railA.x, railA.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(prevB.x, prevB.y); ctx.lineTo(railB.x, railB.y); ctx.stroke();
+      }
+      prevA = railA; prevB = railB;
+    }
+  }
+
+  function drawFreeMode() {
+    ctx.fillStyle = "#e9e0c4";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    freePaths.forEach(function (path) { drawPolylineTrack(path.points, path.cum); });
+    if (drawingPoints && drawingPoints.length > 1) {
+      ctx.strokeStyle = "rgba(139,30,43,0.5)";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(drawingPoints[0].x, drawingPoints[0].y);
+      for (var i = 1; i < drawingPoints.length; i++) ctx.lineTo(drawingPoints[i].x, drawingPoints[i].y);
+      ctx.stroke();
+    }
+  }
+
+  function updateFreeTrain(t, dt) {
+    var path = freePaths.filter(function (p) { return p.id === t.pathId; })[0];
+    if (!path) return;
+    var total = path.cum[path.cum.length - 1];
+    var speedPx = dt * 70;
+    t.dist += speedPx * t.dir;
+    if (path.closed) {
+      var wrapped = ((t.dist % total) + total) % total;
+      t.dist = wrapped;
+    } else {
+      if (t.dist >= total) { t.dist = total; t.dir = -1; }
+      else if (t.dist <= 0) { t.dist = 0; t.dir = 1; }
+    }
+  }
+
+  function drawFreeTrain(t) {
+    var path = freePaths.filter(function (p) { return p.id === t.pathId; })[0];
+    if (!path) return;
+    var pt = pathPointAt(path, t.dist);
+    var angle = Math.atan2(pt.ty, pt.tx);
+    if (t.dir === -1) angle += Math.PI;
+    var series = seriesById(t.series);
+    ctx.save();
+    ctx.translate(pt.x, pt.y);
+    ctx.rotate(angle);
+    var w = TILE * 0.86, h = TILE * 0.42;
+    ctx.fillStyle = series.body;
+    roundRect(-w / 2, -h / 2, w, h, 6);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.25)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = series.stripe;
+    ctx.fillRect(-w / 2, -h * 0.12, w, h * 0.24);
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.fillRect(-w / 2 + 4, -h / 2 + 3, w * 0.28, h * 0.32);
+    ctx.fillRect(-w / 2 + w * 0.4, -h / 2 + 3, w * 0.28, h * 0.32);
+    ctx.restore();
+  }
+
   // ---------- 電車 ----------
   function seriesById(id) {
     for (var i = 0; i < TRAIN_SERIES.length; i++) {
@@ -445,6 +622,7 @@
 
   function removeTrain(id) {
     trains = trains.filter(function (t) { return t.id !== id; });
+    freeTrains = freeTrains.filter(function (t) { return t.id !== id; });
     renderTrainList();
     saveState();
   }
@@ -573,14 +751,22 @@
     var dt = Math.min((ts - lastTime) / 1000, 0.1);
     lastTime = ts;
 
-    if (playing) {
-      var factor = speed * 0.9;
-      totalTime += dt;
-      for (var i = 0; i < trains.length; i++) updateTrain(trains[i], dt * factor);
-    }
+    var factor = speed * 0.9;
+    if (playing) totalTime += dt;
 
-    drawGrid();
-    for (var j = 0; j < trains.length; j++) drawTrain(trains[j]);
+    if (mode === "tile") {
+      if (playing) {
+        for (var i = 0; i < trains.length; i++) updateTrain(trains[i], dt * factor);
+      }
+      drawGrid();
+      for (var j = 0; j < trains.length; j++) drawTrain(trains[j]);
+    } else {
+      if (playing) {
+        for (var k = 0; k < freeTrains.length; k++) updateFreeTrain(freeTrains[k], dt * factor);
+      }
+      drawFreeMode();
+      for (var m = 0; m < freeTrains.length; m++) drawFreeTrain(freeTrains[m]);
+    }
 
     requestAnimationFrame(loop);
   }
@@ -627,7 +813,16 @@
     return bestRot;
   }
 
-  function handleTap(evt) {
+  function pointFromEvent(evt) {
+    var rect = canvas.getBoundingClientRect();
+    var clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    var clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+    var x = (clientX - rect.left) * (canvas.width / rect.width);
+    var y = (clientY - rect.top) * (canvas.height / rect.height);
+    return { x: x, y: y };
+  }
+
+  function handleTileTap(evt) {
     evt.preventDefault();
     var cell = cellFromEvent(evt);
     if (!inBounds(cell.row, cell.col)) return;
@@ -670,7 +865,82 @@
     saveState();
   }
 
-  canvas.addEventListener("pointerdown", handleTap);
+  function spawnFreeTrain(seriesId, pathId, dist) {
+    if (freeTrains.length >= 24) return;
+    freeTrains.push({ id: trainSeq++, series: seriesId, pathId: pathId, dist: dist, dir: 1 });
+    renderTrainList();
+    saveState();
+  }
+
+  function finalizeDrawing() {
+    if (!drawingPoints || drawingPoints.length < 2) { drawingPoints = null; return; }
+    var pts = drawingPoints.slice();
+    var first = pts[0], last = pts[pts.length - 1];
+    var dx = last.x - first.x, dy = last.y - first.y;
+    var closed = false;
+    if (Math.sqrt(dx * dx + dy * dy) < 28 && pts.length > 4) {
+      pts[pts.length - 1] = { x: first.x, y: first.y };
+      closed = true;
+    }
+    var path = { id: freePathSeq++, points: pts, closed: closed };
+    path.cum = computeCum(path.points);
+    if (path.cum[path.cum.length - 1] < 20) { drawingPoints = null; return; }
+    freePaths.push(path);
+    drawingPoints = null;
+    saveState();
+  }
+
+  function onPointerDown(evt) {
+    if (mode === "tile") { handleTileTap(evt); return; }
+    evt.preventDefault();
+    var p = pointFromEvent(evt);
+
+    if (placingTrainSeries) {
+      var found = findNearestPath(p.x, p.y, 30);
+      if (found) {
+        spawnFreeTrain(placingTrainSeries, found.path.id, found.arcDist);
+        placingTrainSeries = null;
+        document.getElementById("addTrainBtn").textContent = "＋ 配置モード開始";
+        setStatus("");
+      } else {
+        setStatus("線の上をタップしてください");
+      }
+      return;
+    }
+
+    if (selectedFreeTool === "eraser") {
+      var found2 = findNearestPath(p.x, p.y, 20);
+      if (found2) {
+        freePaths = freePaths.filter(function (pp) { return pp.id !== found2.path.id; });
+        freeTrains = freeTrains.filter(function (t) { return t.pathId !== found2.path.id; });
+        renderTrainList();
+        saveState();
+      }
+      return;
+    }
+
+    drawingPoints = [p];
+    try { canvas.setPointerCapture(evt.pointerId); } catch (e) { /* ignore */ }
+  }
+
+  function onPointerMove(evt) {
+    if (mode !== "free" || !drawingPoints) return;
+    evt.preventDefault();
+    var p = pointFromEvent(evt);
+    var last = drawingPoints[drawingPoints.length - 1];
+    var dx = p.x - last.x, dy = p.y - last.y;
+    if (dx * dx + dy * dy > 25) drawingPoints.push(p);
+  }
+
+  function onPointerUp(evt) {
+    if (mode !== "free" || !drawingPoints) return;
+    evt.preventDefault();
+    finalizeDrawing();
+  }
+
+  canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerUp);
 
   // ---------- UIの構築 ----------
   function buildToolIcon(canvasEl, type) {
@@ -783,7 +1053,8 @@
   function renderTrainList() {
     var list = document.getElementById("trainList");
     list.innerHTML = "";
-    trains.forEach(function (t) {
+    var current = mode === "tile" ? trains : freeTrains;
+    current.forEach(function (t) {
       var s = seriesById(t.series);
       var chip = document.createElement("div");
       chip.className = "train-chip";
@@ -805,15 +1076,22 @@
   }
 
   // ---------- 保存/読込 ----------
-  var STORAGE_KEY = "keio_line_sim_v2";
+  var STORAGE_KEY = "keio_line_sim_v3";
   function saveState() {
     try {
       var data = {
+        mode: mode,
         grid: grid,
         signals: signals,
         signalAutoMode: signalAutoMode,
         trains: trains.map(function (t) {
           return { series: t.series, row: t.row, col: t.col, entrySide: t.entrySide, heading: t.heading };
+        }),
+        freePaths: freePaths.map(function (p) {
+          return { id: p.id, points: p.points, closed: p.closed };
+        }),
+        freeTrains: freeTrains.map(function (t) {
+          return { series: t.series, pathId: t.pathId, dist: t.dist, dir: t.dir };
         })
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -825,6 +1103,7 @@
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       var data = JSON.parse(raw);
+      if (data.mode === "tile" || data.mode === "free") mode = data.mode;
       if (data.grid && data.grid.length === ROWS) grid = data.grid;
       if (data.signals) signals = data.signals;
       if (typeof data.signalAutoMode === "boolean") signalAutoMode = data.signalAutoMode;
@@ -837,8 +1116,22 @@
           };
         });
       }
+      if (data.freePaths) {
+        freePaths = data.freePaths.map(function (p) {
+          var path = { id: p.id, points: p.points, closed: p.closed };
+          path.cum = computeCum(path.points);
+          freePathSeq = Math.max(freePathSeq, p.id + 1);
+          return path;
+        });
+      }
+      if (data.freeTrains) {
+        freeTrains = data.freeTrains.map(function (t) {
+          return { id: trainSeq++, series: t.series, pathId: t.pathId, dist: t.dist, dir: t.dir };
+        });
+      }
     } catch (e) { /* ignore */ }
   }
+
 
   // ---------- ボタン類 ----------
   document.getElementById("addTrainBtn").addEventListener("click", function (e) {
@@ -850,11 +1143,17 @@
     }
     placingTrainSeries = selectedSeries;
     e.target.textContent = "✕ 配置モードを解除";
-    setStatus("線路をタップして " + seriesById(selectedSeries).name + " を配置します");
+    var place = mode === "tile" ? "線路をタップして" : "線の上をタップして";
+    setStatus(place + " " + seriesById(selectedSeries).name + " を配置します");
   });
   document.getElementById("clearTrainsBtn").addEventListener("click", function () {
-    if (trains.length === 0) return;
-    if (confirm("すべての電車を削除しますか？")) { trains = []; renderTrainList(); saveState(); }
+    var current = mode === "tile" ? trains : freeTrains;
+    if (current.length === 0) return;
+    if (confirm("すべての電車を削除しますか？")) {
+      if (mode === "tile") trains = []; else freeTrains = [];
+      renderTrainList();
+      saveState();
+    }
   });
   document.getElementById("playPauseBtn").addEventListener("click", function (e) {
     playing = !playing;
@@ -866,16 +1165,59 @@
     saveState();
   });
   document.getElementById("resetBtn").addEventListener("click", function () {
-    if (!confirm("線路と電車をすべて消去します。よろしいですか？")) return;
+    if (!confirm("線路・お絵かきの線・電車をすべて消去します。よろしいですか？")) return;
     for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) grid[r][c] = { type: "empty", rot: 0 };
     trains = [];
     signals = {};
+    freePaths = [];
+    freeTrains = [];
     renderTrainList();
     saveState();
   });
   document.getElementById("speedSlider").addEventListener("input", function (e) {
     speed = parseInt(e.target.value, 10);
   });
+
+  function renderFreeToolRow() {
+    var row = document.getElementById("freeToolRow");
+    row.innerHTML = "";
+    var items = [["draw", "✏️", "描く"], ["eraser", "🧹", "線を消す"]];
+    items.forEach(function (item) {
+      var btn = document.createElement("div");
+      btn.className = "tool-btn" + (selectedFreeTool === item[0] ? " active" : "");
+      var icon = document.createElement("div");
+      icon.style.fontSize = "20px";
+      icon.textContent = item[1];
+      var label = document.createElement("div");
+      label.textContent = item[2];
+      btn.appendChild(icon);
+      btn.appendChild(label);
+      btn.addEventListener("click", function (t) {
+        return function () { selectedFreeTool = t; renderFreeToolRow(); };
+      }(item[0]));
+      row.appendChild(btn);
+    });
+  }
+
+  function setMode(m) {
+    mode = m;
+    document.getElementById("tilePanel").style.display = (m === "tile") ? "" : "none";
+    document.getElementById("freePanel").style.display = (m === "free") ? "" : "none";
+    document.getElementById("modeTileBtn").className = "icon-btn" + (m === "tile" ? "" : " secondary");
+    document.getElementById("modeFreeBtn").className = "icon-btn" + (m === "free" ? "" : " secondary");
+    canvas.style.touchAction = (m === "free") ? "none" : "manipulation";
+    placingTrainSeries = null;
+    drawingPoints = null;
+    document.getElementById("addTrainBtn").textContent = "＋ 配置モード開始";
+    setStatus("");
+    renderTrainList();
+    saveState();
+  }
+
+  document.getElementById("modeTileBtn").addEventListener("click", function () { setMode("tile"); });
+  document.getElementById("modeFreeBtn").addEventListener("click", function () { setMode("free"); });
+
+
 
   function generateOvalCourse() {
     if (!confirm("楕円コースを自動生成します。現在の線路・電車・信号機はすべて消えます。よろしいですか？")) return;
@@ -910,9 +1252,11 @@
   loadState();
   document.getElementById("signalModeBtn").textContent = signalAutoMode ? "信号:自動" : "信号:手動";
   renderToolRow();
+  renderFreeToolRow();
   renderTrainTypeRow();
   renderTrainList();
-  if (trains.length === 0) {
+  setMode(mode);
+  if (trains.length === 0 && freePaths.length === 0) {
     // 初回は簡単なループ線路をサンプルとして設置
     var sample = [
       [1,1,"curve",1],[1,2,"straight",0],[1,3,"straight",0],[1,4,"curve",2],
